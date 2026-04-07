@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles de Servicios - Falcon IT</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cardo:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --card-bg: #0B1622;
+            --text-color: #8A9199;
+            --header-color: #ffffff;
+            --accent-blue: #3D7BFF;
+            --accent-gold: #F3BA2F;
+            --border-color: rgba(31, 58, 95, 0.2);
+            --danger-color: #f43f5e;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+        h1, h2, h3 {
+            font-family: 'Cardo', serif;
+            color: var(--header-color);
+            line-height: 1.2;
+        }
+        h1 { font-size: 3.5rem; margin-bottom: 1.5rem; text-align: center; }
+        h2 { font-size: 2rem; margin-top: 4rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; display: flex; align-items: center; gap: 15px; }
+        h3 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: var(--header-color); }
+        
+        .intro { text-align: center; max-width: 700px; margin: 0 auto 4rem; opacity: 0.8; font-size: 1.1rem; }
+
+        .section-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 3rem;
+        }
+
+        .definition-grid {
+            display: grid;
+            grid-template-cols: 1fr;
+            gap: 24px;
+            margin-top: 2rem;
+        }
+        @media (min-width: 768px) {
+            .definition-grid { grid-template-cols: 1fr 1fr; }
+        }
+
+        .def-item {
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .def-item strong { color: var(--header-color); display: block; margin-bottom: 8px; font-size: 1.1rem; }
+
+        .limit-box {
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            background: rgba(244, 63, 94, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            margin-top: 2rem;
+        }
+        .limit-box ul {
+            padding-left: 20px;
+            margin: 0;
+        }
+        .limit-box li {
+            margin-bottom: 12px;
+            color: #ff8a9b;
+        }
+        .limit-title {
+            color: var(--danger-color);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: var(--header-color); }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(61, 123, 255, 0.1);
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+        }
+
+        hr { border: 0; border-top: 1px solid var(--border-color); margin: 4rem 0 2rem; }
+        .footer-note { font-size: 0.8rem; text-align: center; opacity: 0.5; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .section-card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">
+            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i> Volver al inicio
+        </a>
+
+        <h1>Detalles de Servicios</h1>
+        <p class="intro">Información operativa detallada sobre el modelo de soporte IT de Falcon IT, alcances y definiciones contractuales.</p>
+
+        <section>
+            <h2><i data-lucide="layers"></i> 1. Enfoque del Modelo</h2>
+            <div class="section-card">
+                <p>Falcon IT ofrece un servicio de soporte IT por suscripción estructurado en tres niveles, diseñados según la criticidad operativa y dependencia tecnológica del cliente.</p>
+                <p>Cada plan define una estructura clara de:</p>
+                <ul style="padding-left: 20px;">
+                    <li>Nivel de prioridad en atención remoto y presencial.</li>
+                    <li>Frecuencia de visitas preventivas y correctivas.</li>
+                    <li>Profundidad del mantenimiento técnico.</li>
+                    <li>Nivel de protección de datos y gestión de backups.</li>
+                    <li>Grado de acompañamiento técnico y asesoría estratégica.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2><i data-lucide="book-open"></i> 2. Definiciones Clave</h2>
+            <p>Es fundamental entender los siguientes términos para garantizar una comunicación fluida entre el cliente y nuestro equipo técnico:</p>
+            <div class="definition-grid">
+                <div class="def-item">
+                    <strong>Soporte Remoto</strong>
+                    <p>Atención técnica a distancia para resolución de incidencias, configuración de software y asistencia inmediata mediante herramientas de control remoto.</p>
+                </div>
+                <div class="def-item">
+                    <strong>Visitas Presenciales</strong>
+                    <p>Intervenciones en sitio programadas (preventivas) o necesarias (correctivas) según el plan contratado y la disponibilidad geográfica.</p>
+                </div>
+                <div class="def-item">
+                    <strong>Tiempo de Respuesta (SLA)</strong>
+                    <p>Tiempo máximo estipulado para dar inicio a la atención de una incidencia reportada. Nota: No garantiza el tiempo total de resolución.</p>
+                </div>
+                <div class="def-item">
+                    <strong>Monitoreo Activo</strong>
+                    <p>Seguimiento continuo de la salud de los sistemas clave para detectar y corregir fallas antes de que impacten la operación del negocio.</p>
+                </div>
+                <div class="def-item" style="grid-column: 1 / -1;">
+                    <strong>Uso Razonable (SLA Corporativo)</strong>
+                    <p>El servicio, aunque flexible, no es ilimitado. Se gestiona bajo criterios de uso justo basados en la carga operativa estándar de la infraestructura del cliente.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2><i data-lucide="shield-alert"></i> 3. Límites del Servicio</h2>
+            <div class="limit-box">
+                <div class="limit-title"><i data-lucide="alert-triangle"></i> IMPORTANTE - LEA CON DETALLE</div>
+                <p>Para mantener la calidad y el enfoque de nuestros servicios de mantenimiento, se establecen las siguientes exclusiones:</p>
+                <ul>
+                    <li><strong>Proyectos de Infraestructura:</strong> Instalaciones nuevas de red, cableado estructurado o despliegues masivos no están incluidos y se cotizan de forma independiente.</li>
+                    <li><strong>Almacenamiento Cloud:</strong> El costo de almacenamiento en la nube (Google Drive, AWS, Azure, etc.) es responsabilidad directa del cliente.</li>
+                    <li><strong>Responsabilidad de Datos:</strong> Aunque gestionamos backups, el cliente es el responsable legal de su información y de contratar el almacenamiento necesario.</li>
+                    <li><strong>Protección Total:</strong> No existe la "protección total" contra la pérdida de datos; Falcon IT implementa las mejores prácticas para minimizar el riesgo al máximo.</li>
+                    <li><strong>Logística:</strong> Las visitas presenciales se organizan por zonas geográficas y rutas programadas para optimizar tiempos.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2><i data-lucide="briefcase"></i> 4. Alcance Operativo por Plan</h2>
+            <p>Resumen del enfoque táctico de nuestras soluciones:</p>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 20px; padding-left: 15px; border-left: 3px solid #3D7BFF;">
+                    <strong style="color:white">Plan Básico:</strong> Soporte reactivo. El objetivo es resolver problemas críticos cuando ocurren para evitar parálisis total.
+                </li>
+                <li style="margin-bottom: 20px; padding-left: 15px; border-left: 3px solid #F3BA2F;">
+                    <strong style="color:white">Plan Empresarial:</strong> Operación estable. El núcleo del negocio se protege con mantenimiento preventivo continuo y soporte prioritario.
+                </li>
+                <li style="margin-bottom: 20px; padding-left: 15px; border-left: 3px solid #6B3CF1;">
+                    <strong style="color:white">Plan Corporativo:</strong> Continuidad crítica. Enfoque en protección empresarial total, prevención activa y control riguroso de datos.
+                </li>
+            </ul>
+        </section>
+
+        <hr>
+        <div class="footer-note">
+            © 2026 Falcon IT. Este documento define la base operativa de nuestros servicios IT. Para ver la tabla comparativa de precios, visite la sección de <a href="/planes.html" style="color:var(--accent-blue)">Detalle de Planes</a>.
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

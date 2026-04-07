@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalles de Planes - Falcon IT</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cardo:wght@400;700&family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        --bg-color: #050505;
+        --card-bg: #0b1622;
+        --text-color: #8a9199;
+        --header-color: #ffffff;
+        --accent-blue: #3d7bff;
+        --accent-gold: #f3ba2f;
+        --accent-purple: #6b3cf1;
+        --border-color: rgba(31, 58, 95, 0.2);
+      }
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: "Inter", sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 80px 20px;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: "Cardo", serif;
+        color: var(--header-color);
+        line-height: 1.2;
+      }
+      h1 {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      h2 {
+        font-size: 2rem;
+        margin-top: 4rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+      }
+      h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .intro {
+        text-align: center;
+        max-width: 700px;
+        margin: 0 auto 4rem;
+        opacity: 0.8;
+        font-size: 1.1rem;
+      }
+
+      /* Estilos de la Tabla Comparativa */
+      .table-container {
+        width: 100%;
+        overflow-x: auto;
+        background: var(--card-bg);
+        border-radius: 24px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 4rem;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+      }
+      th,
+      td {
+        padding: 20px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+      }
+      th {
+        color: var(--header-color);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+        background: transparent;
+      }
+      .row-label {
+        font-weight: 600;
+        color: var(--header-color);
+        width: 25%;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .col-basico,
+      .col-empresarial,
+      .col-corporativo {
+        width: 25%;
+        border-left: 1px solid var(--border-color);
+        background: transparent !important;
+      }
+      .col-basico { color: var(--accent-blue); }
+      .col-empresarial { color: var(--accent-gold); }
+      .col-corporativo { color: var(--accent-purple); }
+
+      /* Targeting all data cells to ensure transparency */
+      td:not(.row-label) {
+        background: transparent;
+      }
+
+      .check-yes {
+        color: #10b981;
+        font-weight: bold;
+      }
+      .check-no {
+        color: #f43f5e;
+        opacity: 0.5;
+      }
+
+      /* Detalles Individuales */
+      .plan-grid {
+        display: grid;
+        grid-template-cols: 1fr;
+        gap: 40px;
+      }
+      .plan-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 32px;
+        padding: 40px;
+        position: relative;
+        overflow: hidden;
+      }
+      .plan-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+      }
+      .card-basico::before {
+        background: var(--accent-blue);
+      }
+      .card-empresarial::before {
+        background: var(--accent-gold);
+      }
+      .card-corporativo::before {
+        background: var(--accent-purple);
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+      }
+      .tag-basico {
+        background: rgba(61, 123, 255, 0.1);
+        color: var(--accent-blue);
+      }
+      .tag-empresarial {
+        background: rgba(243, 186, 47, 0.1);
+        color: var(--accent-gold);
+      }
+      .tag-corporativo {
+        background: rgba(107, 60, 241, 0.1);
+        color: var(--accent-purple);
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-cols: 1fr;
+        gap: 20px;
+        list-style: none;
+        padding: 0;
+      }
+
+      @media (min-width: 768px) {
+        .feature-list {
+          grid-template-cols: 1fr 1fr;
+        }
+      }
+      .feature-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 0.95rem;
+      }
+      .feature-item i {
+        margin-top: 4px;
+        color: var(--accent-blue);
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        transition: color 0.3s;
+      }
+      .back-link:hover {
+        color: var(--header-color);
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2.5rem;
+        }
+        .plan-card {
+          padding: 30px;
+        }
+        .feature-list {
+          grid-template-cols: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/" class="back-link">
+        <i data-lucide="arrow-left" style="width: 18px; height: 18px"></i>
+        Volver al inicio
+      </a>
+
+      <h1>Comparación de Planes</h1>
+      <p class="intro">
+        Analice detalladamente cuál de nuestras soluciones tecnológicas se
+        adapta mejor a la escala y criticidad operativa de su negocio.
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="row-label">Característica</th>
+              <th class="basico">Básico ($60)</th>
+              <th class="empresarial">Empresarial ($80)</th>
+              <th class="corporativo">Corporativo ($120)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="row-label">Público objetivo</td>
+              <td>Pequeñas empresas</td>
+              <td>PYMES operativas</td>
+              <td>Empresas críticas</td>
+            </tr>
+            <tr>
+              <td class="row-label">Soporte remoto</td>
+              <td>Limitado</td>
+              <td>Prioritario</td>
+              <td>Prioritario VIP</td>
+            </tr>
+            <tr>
+              <td class="row-label">Visitas presenciales</td>
+              <td>2 mensuales</td>
+              <td>4 mensuales</td>
+              <td>Según necesidad</td>
+            </tr>
+            <tr>
+              <td class="row-label">Tiempo de respuesta</td>
+              <td>24–48 horas</td>
+              <td>12–24 horas</td>
+              <td>4–8 horas</td>
+            </tr>
+            <tr>
+              <td class="row-label">Mantenimiento</td>
+              <td>Correctivo</td>
+              <td>Preventivo + Correctivo</td>
+              <td>Optimización Continua</td>
+            </tr>
+            <tr>
+              <td class="row-label">Respaldo en nube</td>
+              <td class="check-no">No incluido</td>
+              <td class="check-yes">Gestión incluida</td>
+              <td class="check-yes">Gestión + Verificación</td>
+            </tr>
+            <tr>
+              <td class="row-label">Backup Local</td>
+              <td>Básico</td>
+              <td>Incluido</td>
+              <td>Incluido + Supervisión</td>
+            </tr>
+            <tr>
+              <td class="row-label">Control de Backups</td>
+              <td class="check-no">No</td>
+              <td>Básico</td>
+              <td class="check-yes">Periódico</td>
+            </tr>
+            <tr>
+              <td class="row-label">Asesoría Tecnológica</td>
+              <td class="check-no">No</td>
+              <td>Básica</td>
+              <td class="check-yes">Continua</td>
+            </tr>
+            <tr>
+              <td class="row-label">Monitoreo</td>
+              <td class="check-no">No</td>
+              <td>Básico</td>
+              <td class="check-yes">Activo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="plan-grid">
+        <!-- Plan Básico -->
+        <div class="plan-card card-basico">
+          <span class="tag tag-basico">Entrada</span>
+          <h3>Plan Básico - Soporte Operativo Inicial</h3>
+          <p>
+            Orientado a resolver incidencias puntuales y mantener la
+            operatividad mínima del negocio con una inversión optimizada.
+          </p>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <i data-lucide="check-circle-2"></i>
+              <span
+                ><strong>Soporte Reactivo:</strong> Enfocado en resolver
+                problemas cuando ocurren.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i data-lucide="check-circle-2"></i>
+              <span
+                ><strong>Operación Sencilla:</strong> Ideal para oficinas con
+                baja dependencia tecnológica.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i data-lucide="check-circle-2"></i>
+              <span
+                ><strong>Backup Local:</strong> Gestión de respaldos en sitio
+                para datos críticos.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i data-lucide="check-circle-2"></i>
+              <span
+                ><strong>Visitas:</strong> Cobertura de 2 visitas presenciales
+                para fallas de hardware.</span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Plan Empresarial -->
+        <div class="plan-card card-empresarial">
+          <span class="tag tag-empresarial">Recomendado</span>
+          <h3>Plan Empresarial - Operación Estable</h3>
+          <p>
+            Diseñado para mantener la estabilidad, prevenir fallas y asegurar la
+            continuidad operativa de PYMES en crecimiento.
+          </p>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-gold)"
+              ></i>
+              <span
+                ><strong>Soporte Prioritario:</strong> Canal de atención rápida
+                para reducción de tiempos muertos.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-gold)"
+              ></i>
+              <span
+                ><strong>Mantenimiento Preventivo:</strong> Revision periódica
+                para evitar fallas antes de que ocurran.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-gold)"
+              ></i>
+              <span
+                ><strong>Cloud Backup:</strong> Configuración y supervisión de
+                respaldos en nube.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-gold)"
+              ></i>
+              <span
+                ><strong>Asesoría Básica:</strong> Recomendaciones oportunas
+                sobre hardware y seguridad.</span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Plan Corporativo -->
+        <div class="plan-card card-corporativo">
+          <span class="tag tag-corporativo">Continuidad Crítica</span>
+          <h3>Plan Corporativo - Protección Total</h3>
+          <p>
+            Garantiza la máxima continuidad operativa, seguridad de datos y
+            soporte prioritario VIP para infraestructuras complejas.
+          </p>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-purple)"
+              ></i>
+              <span
+                ><strong>Soporte VIP:</strong> Respuesta inmediata en máximo 8
+                horas para casos críticos.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-purple)"
+              ></i>
+              <span
+                ><strong>Control de Datos:</strong> Validación periódica de
+                recuperación de desastres.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-purple)"
+              ></i>
+              <span
+                ><strong>Monitoreo Activo:</strong> Supervisión remota de
+                servidores y red de la empresa.</span
+              >
+            </li>
+            <li class="feature-item">
+              <i
+                data-lucide="check-circle-2"
+                style="color: var(--accent-purple)"
+              ></i>
+              <span
+                ><strong>Visitas Ilimitadas:</strong> Soporte presencial según
+                necesidad del cliente.</span
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <hr />
+      <div class="footer-note">
+        © 2026 Falcon IT. Los servicios están sujetos a la infraestructura
+        actual del cliente. Los tiempos de respuesta pueden variar según la zona
+        geográfica.
+      </div>
+    </div>
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
