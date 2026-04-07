@@ -130,3 +130,25 @@ export async function getSignedUrl(path: string, bucket: string = 'payment-proof
 
   return { data: data.signedUrl, error: null };
 }
+
+/**
+ * Get visits for a specific client
+ */
+export async function getClientVisits(clientId: string) {
+  const supabase = await createServerClientComponent();
+  const { data, error } = await supabase
+    .from('visits')
+    .select(`
+      *,
+      technician:assigned_to (full_name)
+    `)
+    .eq('client_id', clientId)
+    .order('scheduled_start', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching client visits:', error);
+    return { data: null, error };
+  }
+
+  return { data, error };
+}

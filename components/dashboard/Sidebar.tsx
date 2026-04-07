@@ -12,7 +12,8 @@ import {
   FileText, 
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Package
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { createClient } from '@/lib/supabase';
@@ -27,16 +28,20 @@ export const Sidebar = ({ role }: SidebarProps) => {
 
   const clientLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Pagos', href: '/dashboard/payments', icon: CreditCard },
+    { name: 'Mis Visitas', href: '/dashboard/visits', icon: Calendar },
+    { name: 'Mis Pagos', href: '/dashboard/payments', icon: CreditCard },
+    { name: 'Incidencias', href: '/dashboard/incidents', icon: AlertTriangle },
+    { name: 'Reportes Técnicos', href: '/dashboard/reports', icon: FileText },
   ];
 
   const adminLinks = [
     { name: 'Métricas', href: '/admin', icon: LayoutDashboard },
     { name: 'Clientes', href: '/admin/clients', icon: Users },
-    { name: 'Suscripciones', href: '/admin/subscriptions', icon: Calendar },
-    { name: 'Pagos Pendientes', href: '/admin/payments', icon: CreditCard },
-    { name: 'Incidencias', href: '/admin/incidents', icon: AlertTriangle },
-    { name: 'Reportes', href: '/admin/reports', icon: FileText },
+    { name: 'Suscripciones', href: '/admin/subscriptions', icon: Package },
+    { name: 'Agenda Visitas', href: '/admin/visits', icon: Calendar },
+    { name: 'Validar Pagos', href: '/admin/payments', icon: CreditCard },
+    { name: 'Tickets Soporte', href: '/admin/incidents', icon: AlertTriangle },
+    { name: 'Reportes Técnicos', href: '/admin/reports', icon: FileText },
   ];
 
   const links = role === 'admin' ? adminLinks : clientLinks;
