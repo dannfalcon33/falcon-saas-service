@@ -97,7 +97,7 @@ export const PlansSection = () => {
               </div>
 
               <ul className="space-y-4 mb-10 flex-1 relative z-10">
-                {plan.features.map((feature, fIndex) => (
+                {plan.features.map((feature: string, fIndex: number) => (
                   <li
                     key={fIndex}
                     className="flex items-start gap-3 text-[#C0C6CF]"

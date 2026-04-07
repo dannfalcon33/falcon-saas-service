@@ -95,7 +95,7 @@ export const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <ul className="space-y-3 mb-8 flex-1">
-                      {plan.features.slice(0, 4).map((feature, fIndex) => (
+                      {plan.features.slice(0, 4).map((feature: string, fIndex: number) => (
                         <li key={fIndex} className="flex items-center gap-3 text-[11px] text-[#C0C6CF] font-medium">
                           <Check className="w-4 h-4 text-blue-400 shrink-0" />
                           <span>{feature}</span>

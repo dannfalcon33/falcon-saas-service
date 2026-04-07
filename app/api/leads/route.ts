@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase-server';
 
 export async function POST(request: Request) {
   try {
@@ -10,33 +10,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const lead = await prisma.lead.create({
-      data: {
-        name,
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: "Supabase configuration error" }, { status: 500 });
+    }
+
+    // Since this is a new lead reporting a payment, we save it to leads table.
+    // The leads table doesn't have payment_method/reference by default in the SQL provided
+    // but we can store them in the 'notes' or 'source' field, or just save the lead.
+    // However, the provided SQL has 'plan_interest_id'.
+    // We should find the plan ID by name first.
+
+    const { data: planData } = await supabaseAdmin
+      .from('plans')
+      .select('id')
+      .eq('name', plan)
+      .maybeSingle();
+
+    const { data: lead, error } = await supabaseAdmin
+      .from('leads')
+      .insert({
+        full_name: name,
         email,
-        company,
+        company_name: company,
         phone,
-        plan,
-        paymentMethod: payment_method,
-        reference,
-        status: "pending",
-      },
-    });
+        plan_interest_id: planData?.id,
+        status: 'new',
+        notes: `Interés en plan: ${plan}. Pago por: ${payment_method}. Ref: ${reference}`,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(lead, { status: 201 });
   } catch (error: any) {
-    console.error("Prisma Error:", error);
+    console.error("Supabase Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
-    const leads = await prisma.lead.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: "Supabase configuration error" }, { status: 500 });
+    }
+
+    const { data: leads, error } = await supabaseAdmin
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
     return NextResponse.json(leads);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

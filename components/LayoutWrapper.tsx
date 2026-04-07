@@ -11,8 +11,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const noHeaderPaths = ['/login', '/billing', '/privacidad', '/terminos', '/planes', '/servicios'];
   const noFooterPaths = ['/login', '/billing', '/privacidad', '/terminos'];
 
-  const showHeader = !noHeaderPaths.includes(pathname);
-  const showFooter = !noFooterPaths.includes(pathname);
+  const isDashboardOrAdmin = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  const showHeader = !noHeaderPaths.includes(pathname) && !isDashboardOrAdmin;
+  const showFooter = !noFooterPaths.includes(pathname) && !isDashboardOrAdmin;
 
   return (
     <div className="min-h-screen bg-black font-sans text-gray-200 flex flex-col">
