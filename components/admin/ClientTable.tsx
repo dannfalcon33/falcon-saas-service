@@ -10,11 +10,14 @@ import {
   ExternalLink,
   Loader2,
   User as UserIcon,
-  Mail
+  Mail,
+  Send,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard/Common';
 import { ClientStatus } from '@/lib/types';
-import { deleteClient } from '@/lib/actions/admin.actions';
+import { deleteClient, enableClientAccess } from '@/lib/actions/admin.actions';
 import { useRouter } from 'next/navigation';
 
 interface ClientWithSub {
@@ -25,6 +28,9 @@ interface ClientWithSub {
   main_phone?: string;
   status: ClientStatus;
   rif_or_id?: string;
+  invitation_sent_at?: string;
+  access_enabled_at?: string;
+  owner_profile_id?: string;
   subscriptions?: {
     status: string;
     end_date: string;
@@ -42,6 +48,12 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isInviting, setIsInviting] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const filteredClients = initialClients.filter(c => 
     c.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,6 +73,20 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
       alert("Error: " + err.message);
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleInvite = async (id: string) => {
+    setIsInviting(id);
+    try {
+      const { error } = await enableClientAccess(id);
+      if (error) throw new Error(error);
+      alert("Invitación enviada con éxito");
+      router.refresh();
+    } catch (err: any) {
+      alert("Error al enviar invitación: " + err.message);
+    } finally {
+      setIsInviting(null);
     }
   };
 
@@ -100,6 +126,7 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Empresa</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Contacto</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Suscripción</th>
+              <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Acceso Dashboard</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Estado</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Acción</th>
             </tr>
@@ -137,10 +164,32 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
                     {activeSub ? (
                       <div>
                          <p className="text-xs font-bold text-white uppercase tracking-tighter">{activeSub.plan?.name}</p>
-                         <p className="text-[10px] text-emerald-500 font-black italic">Vence: {new Date(activeSub.end_date).toLocaleDateString()}</p>
+                         <p className="text-[10px] text-emerald-500 font-black italic">Vence: {isMounted ? new Date(activeSub.end_date).toLocaleDateString() : '...'}</p>
                       </div>
                     ) : (
                       <span className="text-[10px] font-black text-white/20 uppercase italic">Sin plan activo</span>
+                    )}
+                  </td>
+                  <td className="px-8 py-6">
+                    {client.owner_profile_id ? (
+                      <div className="flex items-center gap-2 text-emerald-500">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Habilitado</span>
+                      </div>
+                    ) : client.invitation_sent_at ? (
+                      <div className="flex items-center gap-2 text-amber-500">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Invitado</span>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleInvite(client.id)}
+                        disabled={isInviting === client.id}
+                        className="flex items-center gap-2 text-[#3D7BFF] hover:text-[#3D7BFF]/80 transition-all font-black text-[10px] uppercase tracking-widest"
+                      >
+                        {isInviting === client.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        Habilitar
+                      </button>
                     )}
                   </td>
                   <td className="px-8 py-6">
@@ -148,6 +197,15 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
                   </td>
                   <td className="px-8 py-6">
                      <div className="flex items-center justify-end gap-2">
+                        {client.invitation_sent_at && !client.owner_profile_id && (
+                          <button 
+                            onClick={() => handleInvite(client.id)}
+                            title="Reenviar invitación"
+                            className="p-2 border border-[#3D7BFF]/5 bg-[#3D7BFF]/5 rounded-lg text-[#3D7BFF] hover:bg-[#3D7BFF] hover:text-white transition-all shadow-sm"
+                          >
+                             <Send className="w-4 h-4" />
+                          </button>
+                        )}
                         <button 
                           onClick={() => onEdit(client)}
                           className="p-2 border border-white/5 bg-white/5 rounded-lg text-[#8A9199] hover:text-white hover:border-white/10 transition-all shadow-sm"
@@ -160,9 +218,6 @@ export const ClientTable = ({ initialClients, onEdit, onAdd }: ClientTableProps)
                           className="p-2 border border-red-500/10 bg-red-500/5 rounded-lg text-red-500/50 hover:text-red-500 hover:border-red-500/20 transition-all disabled:opacity-50"
                         >
                            {isDeleting === client.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
-                        <button className="p-2 border border-white/5 bg-white/5 rounded-lg text-[#3D7BFF] hover:bg-[#3D7BFF] hover:text-white transition-all">
-                           <ExternalLink className="w-4 h-4" />
                         </button>
                      </div>
                   </td>

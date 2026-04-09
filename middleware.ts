@@ -64,15 +64,37 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Role check for admin
-    if (isAdmin) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+    // Role check and status check
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
+    if (isAdmin) {
       if (profile?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+
+    if (isDashboard && profile?.role === 'client') {
+      // Avoid infinite loop if already on pending
+      const isPendingPage = request.nextUrl.pathname === '/dashboard/pending';
+      
+      // Check commercial status using the view mentioned in requirements
+      const { data: status } = await supabase
+        .from('v_client_access_status')
+        .select('*')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      const isActive = status?.subscription_status === 'active' && status?.client_status === 'active';
+
+      if (!isActive && !isPendingPage) {
+        return NextResponse.redirect(new URL('/dashboard/pending', request.url));
+      }
+
+      if (isActive && isPendingPage) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }

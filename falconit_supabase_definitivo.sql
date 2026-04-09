@@ -159,7 +159,7 @@ create index if not exists idx_leads_status on public.leads(status);
 -- =========================
 create table if not exists public.clients (
   id uuid primary key default gen_random_uuid(),
-  owner_profile_id uuid not null references public.profiles(id) on delete restrict,
+  owner_profile_id uuid references public.profiles(id) on delete restrict,
   business_name text not null,
   contact_name text not null,
   main_email text not null,
@@ -168,6 +168,10 @@ create table if not exists public.clients (
   city text,
   zone text,
   address text,
+  billing_email text,
+  administrative_contact text,
+  invitation_sent_at timestamptz,
+  access_enabled_at timestamptz,
   status client_status not null default 'pending_payment',
   notes text,
   created_at timestamptz not null default now(),
@@ -465,9 +469,18 @@ begin
     activated_at = now(),
     activated_by = p_admin_profile_id,
     start_date = coalesce(s.start_date, current_date),
-    end_date = coalesce(s.end_date, current_date + 30),
-    renewal_due_date = coalesce(s.renewal_due_date, current_date + 30),
-    days_remaining = greatest(coalesce(s.end_date, current_date + 30) - current_date, 0)
+    end_date = case 
+      when s.end_date is not null and s.end_date > current_date then s.end_date + 30
+      else current_date + 30
+    end,
+    renewal_due_date = case 
+      when s.end_date is not null and s.end_date > current_date then s.end_date + 30
+      else current_date + 30
+    end,
+    days_remaining = greatest(case 
+      when s.end_date is not null and s.end_date > current_date then (s.end_date + 30) - current_date
+      else 30
+    end, 0)
   where s.id = v_subscription_id;
 
   update public.clients c

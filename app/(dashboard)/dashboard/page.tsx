@@ -10,10 +10,12 @@ import {
   MapPin
 } from 'lucide-react';
 import { createServerClientComponent } from '@/lib/supabase-server';
-import { getCurrentSubscription } from '@/lib/actions/dashboard.actions';
+import { getCurrentSubscription, getClientDashboardData, getClientAccessState } from '@/lib/actions/dashboard.actions';
 import { StatCard, StatusBadge } from '@/components/dashboard/Common';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Logo } from '@/components/Logo';
+import { FileText, MessageSquare, List } from 'lucide-react';
 
 export default async function ClientDashboardPage() {
   const supabase = await createServerClientComponent();
@@ -21,38 +23,54 @@ export default async function ClientDashboardPage() {
 
   if (!user) return null;
 
-  // Get client ID for this user
-  const { data: client } = await supabase
-    .from('clients')
-    .select('id, business_name, status')
-    .eq('owner_profile_id', user.id)
-    .single();
+  const accessState = await getClientAccessState(user.id);
 
-  if (!client) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mb-6 border border-amber-500/20">
-          <AlertCircle className="w-10 h-10 text-amber-500" />
-        </div>
-        <h2 className="text-2xl font-serif font-bold text-white mb-2">Cuenta en Proceso</h2>
-        <p className="text-[#8A9199] max-w-md mx-auto italic font-medium">
-          Aún no tienes una empresa vinculada a tu perfil. Contacta a soporte para finalizar tu registro.
-        </p>
-      </div>
-    );
+  if (accessState.status !== 'active') {
+    redirect('/dashboard/pending');
   }
 
-  const { data: subscription } = await getCurrentSubscription(client.id);
+  const clientId = accessState.clientId;
 
-  // If no active subscription, try to find a pending one
-  const { data: pendingSub } = !subscription ? await supabase
-    .from('subscriptions')
-    .select('*, plan:plans(*)')
-    .eq('client_id', client.id)
-    .eq('status', 'pending_payment')
-    .maybeSingle() : { data: null };
+  // Get client details for display
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, business_name, status, zone')
+    .eq('id', clientId)
+    .single();
+
+  if (!client) return null;
+
+  const { data: subscription } = await getCurrentSubscription(client.id);
+  const { data: stats } = await getClientDashboardData(client.id);
+
+  // If no active subscription, try to find a pending one (sequential queries for robustness)
+  let pendingSub = null;
+  if (!subscription) {
+    const { data: ps } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('client_id', client.id)
+      .eq('status', 'pending_payment')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (ps) {
+      const { data: pPlan } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('id', ps.plan_id)
+        .maybeSingle();
+      
+      pendingSub = { ...ps, plan: pPlan };
+    }
+  }
 
   const activeOrPending = subscription || pendingSub;
+
+  const expirationDays = subscription?.days_remaining || 0;
+  const isExpiring = subscription && expirationDays <= 7 && expirationDays > 0;
+  const isExpired = subscription && expirationDays === 0;
 
   return (
     <div className="space-y-10">
@@ -95,107 +113,155 @@ export default async function ClientDashboardPage() {
         </div>
       )}
 
+      {(isExpiring || isExpired) && (
+        <div className={`p-6 ${isExpired ? 'bg-red-500/10 border-red-500/20' : 'bg-amber-500/10 border-amber-500/20'} border rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-xl relative overflow-hidden group`}>
+          <div className="flex items-center gap-5 relative z-10">
+            <div className={`w-14 h-14 ${isExpired ? 'bg-red-500/20 border-red-500/20' : 'bg-amber-500/20 border-amber-500/20'} rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform`}>
+              <AlertCircle className={`w-6 h-6 ${isExpired ? 'text-red-500' : 'text-amber-500'}`} />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">{isExpired ? 'Suscripción Vencida' : 'Suscripción por Vencer'}</h3>
+              <p className="text-[#8A9199] text-sm font-medium">
+                {isExpired 
+                  ? 'Tu plan ha expirado. Renueva ahora para mantener la continuidad del servicio.' 
+                  : `Tu plan vence en ${expirationDays} días. Te recomendamos renovar con antelación.`}
+              </p>
+            </div>
+          </div>
+          <Link href="/dashboard/payments" className={`px-8 py-4 ${isExpired ? 'bg-red-500' : 'bg-amber-500'} text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:opacity-90 transition-all shadow-xl relative z-10`}>
+            Renovar Ahora
+          </Link>
+        </div>
+      )}
+
       {/* Main KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="Plan Actual" 
+          title="Estado del Servicio" 
           value={activeOrPending?.plan?.name || "Sin Plan"} 
-          subtitle={subscription ? "Suscripción Activa" : "Esperando Pago"}
+          subtitle={subscription ? "SLA Activo" : "Esperando Pago"}
           icon={Zap}
           color={subscription ? "blue" : "amber"}
-          trend={subscription ? "SLA 99.9%" : "Pendiente"}
+          trend={subscription ? "99.9% Uptime" : "Pendiente"}
         />
         <StatCard 
-          title="Días Restantes" 
-          value={subscription?.days_remaining || 0} 
-          subtitle="Ciclo de Facturación"
+          title="Próxima Visita" 
+          value={stats?.nextVisit ? new Date(stats.nextVisit.scheduled_start).toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }) : "No prog."} 
+          subtitle={stats?.nextVisit ? stats.nextVisit.title : "Sin visitas pendientes"}
           icon={Calendar}
-          color={subscription?.days_remaining && subscription.days_remaining < 5 ? "red" : "blue"}
-          trend={subscription?.renewal_due_date ? `Vence: ${subscription.renewal_due_date}` : "N/A"}
-        />
-        <StatCard 
-          title="Visitas Técnicas" 
-          value={`${subscription?.visit_used_count || 0} / ${subscription?.visit_limit_snapshot || (subscription?.is_unlimited_snapshot ? '∞' : 0)}`}
-          subtitle="Incluidas en el plan"
-          icon={Activity}
-          color="emerald"
-          trend={`${subscription?.visit_available_count || 0} Disponibles`}
-        />
-        <StatCard 
-          title="Saldo Estimado" 
-          value={`$${activeOrPending?.price_snapshot_usd || 0}`} 
-          subtitle="Costo Mensual"
-          icon={Clock}
           color="blue"
-          trend="USD por ciclo"
+          trend={stats?.nextVisit ? "Confirmada" : "N/A"}
+        />
+        <StatCard 
+          title="Incidencias" 
+          value={stats?.openIncidents || 0}
+          subtitle="Abiertas en el sistema"
+          icon={Activity}
+          color={stats?.openIncidents && stats.openIncidents > 0 ? "amber" : "emerald"}
+          trend={stats?.openIncidents && stats.openIncidents > 0 ? "Requiere acción" : "Todo despejado"}
+        />
+        <StatCard 
+          title="Último Pago" 
+          value={stats?.lastPayment ? `$${stats.lastPayment.amount_usd}` : "$0.00"} 
+          subtitle={stats?.lastPayment ? `Estado: ${stats.lastPayment.status.toUpperCase()}` : "No hay registros"}
+          icon={Clock}
+          color={stats?.lastPayment?.status === 'verified' ? "emerald" : "amber"}
+          trend={stats?.lastPayment?.verified_at ? "Verificado" : "Pendiente"}
         />
       </div>
 
       {/* Secondary Content Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Active Plan Detail */}
-        <div className="lg:col-span-2 bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 backdrop-blur-xl relative overflow-hidden group">
-          <div className="absolute -top-10 -right-10 opacity-[0.03] rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-            <Logo className="w-64 h-64" />
-          </div>
-          
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <h2 className="text-2xl font-serif font-bold text-white tracking-tight">Detalles del Servicio</h2>
-            <StatusBadge status={subscription?.status || client.status} />
-          </div>
+        {/* Active Plan Detail & Reports */}
+        <div className="lg:col-span-2 space-y-8">
+           <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 backdrop-blur-xl relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 opacity-[0.03] rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                <Logo className="w-64 h-64" />
+              </div>
+              
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <h2 className="text-2xl font-serif font-bold text-white tracking-tight">Último Reporte Técnico</h2>
+                <Link href="/dashboard/reports" className="text-[10px] font-black text-[#3D7BFF] uppercase tracking-widest hover:underline flex items-center gap-1">
+                  Ver Todo <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-            <div className="space-y-6">
-              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2 font-serif uppercase tracking-[0.2em]">Soporte Remoto</p>
-                <p className="text-white font-bold text-sm tracking-wide">{activeOrPending?.plan?.remote_support_label || 'Consultar SLA'}</p>
-              </div>
-              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2 font-serif uppercase tracking-[0.2em]">Respuesta Emergencias</p>
-                <p className="text-white font-bold text-sm tracking-wide">{activeOrPending?.plan?.response_time_min_hours ? `${activeOrPending.plan.response_time_min_hours} - ${activeOrPending.plan.response_time_max_hours} Horas` : 'N/A'}</p>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2 font-serif uppercase tracking-[0.2em]">Monitoreo Activo</p>
-                <p className="text-white font-bold text-sm tracking-wide">{activeOrPending?.plan?.monitoring_label || 'No Incluido'}</p>
-              </div>
-              <div className="p-4 bg-black/40 border border-white/5 rounded-2xl">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2 font-serif uppercase tracking-[0.2em]">Respaldo en Nube</p>
-                <p className="text-white font-bold text-sm tracking-wide">{activeOrPending?.plan?.cloud_backup_label || 'No Incluido'}</p>
-              </div>
-            </div>
-          </div>
+              {stats?.lastReport ? (
+                <div className="relative z-10 space-y-6">
+                  <div className="p-6 bg-black/40 border border-white/5 rounded-2xl">
+                    <h3 className="text-white font-bold mb-2">{stats.lastReport.title}</h3>
+                    <p className="text-sm text-[#8A9199] leading-relaxed line-clamp-3 italic mb-4">
+                      {stats.lastReport.summary}
+                    </p>
+                    <div className="flex items-center gap-4">
+                       <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Fecha: {new Date(stats.lastReport.created_at).toLocaleDateString()}</span>
+                       <span className="w-1 h-1 rounded-full bg-white/10" />
+                       <span className="text-[10px] font-black text-[#3D7BFF] uppercase tracking-widest">SLA Cumplido</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 bg-black/20 border border-white/5 border-dashed rounded-2xl text-center relative z-10">
+                   <p className="text-sm text-[#8A9199] italic">No hay reportes técnicos registrados todavía.</p>
+                </div>
+              )}
 
-          <div className="mt-10 p-6 bg-[#3D7BFF]/5 border border-[#3D7BFF]/10 rounded-2xl flex items-center justify-between relative z-10 group/cta cursor-pointer">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#3D7BFF]/10 rounded-xl flex items-center justify-center text-[#3D7BFF]">
-                <TrendingUp className="w-5 h-5 group-hover/cta:scale-110 transition-transform" />
-              </div>
-              <p className="text-sm font-bold text-white group-hover/cta:text-[#3D7BFF] transition-colors">Ver historial de actividad técnica</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-[#3D7BFF] opacity-50 group-hover/cta:opacity-100 transition-all" />
-          </div>
+              <Link href="/dashboard/visits" className="mt-10 p-6 bg-[#3D7BFF]/5 border border-[#3D7BFF]/10 rounded-2xl flex items-center justify-between relative z-10 group/cta cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-[#3D7BFF]/10 rounded-xl flex items-center justify-center text-[#3D7BFF]">
+                    <TrendingUp className="w-5 h-5 group-hover/cta:scale-110 transition-transform" />
+                  </div>
+                  <p className="text-sm font-bold text-white group-hover/cta:text-[#3D7BFF] transition-colors">Ver historial de actividad técnica y visitas</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-[#3D7BFF] opacity-50 group-hover/cta:opacity-100 transition-all" />
+              </Link>
+           </div>
         </div>
 
-        {/* Quick Location / Access */}
-        <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center">
-          <div className="w-20 h-20 bg-emerald-400/10 rounded-3xl flex items-center justify-center mb-6 border border-emerald-400/20 shadow-[0_0_30px_rgba(52,211,153,0.05)]">
-            <MapPin className="w-10 h-10 text-emerald-400" />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Zonificación</h3>
-          <p className="text-xs text-[#8A9199] font-medium leading-relaxed italic mb-8">Nuestros técnicos están listos para tu zona operativa habitual.</p>
-          
-          <div className="w-full space-y-4">
-            <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest border-b border-white/5 pb-3">
-              <span className="text-white/30">Ciudad</span>
-              <span className="text-white">Maracaibo</span>
-            </div>
-            <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest border-b border-white/5 pb-3">
-              <span className="text-white/30">Sector</span>
-              <span className="text-white">Norte / Indio Mara</span>
-            </div>
-          </div>
+        {/* Quick Actions Panel */}
+        <div className="space-y-6">
+           <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 flex flex-col gap-4">
+              <h3 className="text-xl font-serif font-bold text-white mb-2 tracking-tight">Acciones Rápidas</h3>
+              
+              <Link href="/dashboard/incidents" className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/5 hover:border-[#3D7BFF]/30 transition-all group">
+                <div className="w-10 h-10 bg-[#3D7BFF]/10 text-[#3D7BFF] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Reportar Incidencia</p>
+                  <p className="text-[10px] text-[#8A9199] italic">Soporte técnico inmediato</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/payments" className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/5 hover:border-emerald-500/30 transition-all group">
+                <div className="w-10 h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Subir Comprobante</p>
+                  <p className="text-[10px] text-[#8A9199] italic">Validar mensualidad</p>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/visits" className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/5 hover:border-blue-500/30 transition-all group">
+                <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <List className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Ver Visitas</p>
+                  <p className="text-[10px] text-[#8A9199] italic">Calendario asignado</p>
+                </div>
+              </Link>
+           </div>
+
+           <div className="bg-[#1F3A5F]/10 border border-[#1F3A5F]/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center">
+             <div className="w-16 h-16 bg-emerald-400/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-400/20 shadow-2xl">
+               <MapPin className="w-8 h-8 text-emerald-400" />
+             </div>
+             <h3 className="text-lg font-bold text-white mb-1">Tu Zona</h3>
+             <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-4">Maracaibo / {client.zone || 'Norte'}</p>
+             <p className="text-[11px] text-[#8A9199] font-medium leading-relaxed italic">Atención técnica prioritaria según tu ubicación.</p>
+           </div>
         </div>
       </div>
     </div>

@@ -29,12 +29,18 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
     zone: '',
     address: '',
     owner_profile_id: '',
-    status: 'pending_payment'
+    status: 'pending_payment',
+    billing_email: '',
+    administrative_contact: ''
   });
 
   useEffect(() => {
     if (client) {
-      setFormData(client);
+      setFormData({
+        ...client,
+        billing_email: client.billing_email || '',
+        administrative_contact: client.administrative_contact || ''
+      });
     } else {
       setFormData({
         business_name: '',
@@ -46,7 +52,9 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
         zone: '',
         address: '',
         owner_profile_id: '',
-        status: 'pending_payment'
+        status: 'pending_payment',
+        billing_email: '',
+        administrative_contact: ''
       });
     }
 
@@ -117,7 +125,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <input 
                     required
                     type="text"
-                    value={formData.business_name}
+                    value={formData.business_name || ''}
                     onChange={(e) => setFormData({...formData, business_name: e.target.value})}
                     placeholder="Ejem: Inversiones Falcon C.A"
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
@@ -127,9 +135,39 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <label className="text-[10px] text-white/60 font-bold ml-1">RIF / Identificación</label>
                    <input 
                     type="text"
-                    value={formData.rif_or_id}
+                    value={formData.rif_or_id || ''}
                     onChange={(e) => setFormData({...formData, rif_or_id: e.target.value})}
                     placeholder="J-12345678-0"
+                    className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
+                   />
+                </div>
+             </div>
+          </div>
+
+          {/* Section: Perfil Administrativo & Fiscal */}
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 mb-2">
+                <Mail className="w-4 h-4 text-[#3D7BFF]" />
+                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Perfil Administrativo & Fiscal</span>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] text-white/60 font-bold ml-1">Email de Facturación</label>
+                   <input 
+                    type="email"
+                    value={formData.billing_email || ''}
+                    onChange={(e) => setFormData({...formData, billing_email: e.target.value})}
+                    placeholder="facturacion@empresa.com"
+                    className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
+                   />
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] text-white/60 font-bold ml-1">Contacto Administrativo</label>
+                   <input 
+                    type="text"
+                    value={formData.administrative_contact || ''}
+                    onChange={(e) => setFormData({...formData, administrative_contact: e.target.value})}
+                    placeholder="Nombre del administrador"
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
                    />
                 </div>
@@ -148,7 +186,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <input 
                     required
                     type="text"
-                    value={formData.contact_name}
+                    value={formData.contact_name || ''}
                     onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
                     placeholder="Nombre completo"
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
@@ -158,7 +196,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <label className="text-[10px] text-white/60 font-bold ml-1">Usuario del Sistema (Login)</label>
                    <select 
                     required
-                    value={formData.owner_profile_id}
+                    value={formData.owner_profile_id || ''}
                     onChange={(e) => setFormData({...formData, owner_profile_id: e.target.value})}
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
                    >
@@ -175,7 +213,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <input 
                     required
                     type="email"
-                    value={formData.main_email}
+                    value={formData.main_email || ''}
                     onChange={(e) => setFormData({...formData, main_email: e.target.value})}
                     placeholder="email@empresa.com"
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
@@ -185,7 +223,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <label className="text-[10px] text-white/60 font-bold ml-1">Teléfono Principal</label>
                    <input 
                     type="text"
-                    value={formData.main_phone}
+                    value={formData.main_phone || ''}
                     onChange={(e) => setFormData({...formData, main_phone: e.target.value})}
                     placeholder="+58 412..."
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
@@ -205,7 +243,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <label className="text-[10px] text-white/60 font-bold ml-1">Ciudad</label>
                    <input 
                     type="text"
-                    value={formData.city}
+                    value={formData.city || ''}
                     onChange={(e) => setFormData({...formData, city: e.target.value})}
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
                    />
@@ -214,7 +252,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
                    <label className="text-[10px] text-white/60 font-bold ml-1">Zona / Sector</label>
                    <input 
                     type="text"
-                    value={formData.zone}
+                    value={formData.zone || ''}
                     onChange={(e) => setFormData({...formData, zone: e.target.value})}
                     className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all"
                    />
@@ -223,7 +261,7 @@ export const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
              <div className="space-y-1.5">
                 <label className="text-[10px] text-white/60 font-bold ml-1">Dirección Detallada (Para visitas técnicas)</label>
                 <textarea 
-                  value={formData.address}
+                  value={formData.address || ''}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
                   rows={2}
                   className="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-[#3D7BFF]/50 outline-none transition-all resize-none"

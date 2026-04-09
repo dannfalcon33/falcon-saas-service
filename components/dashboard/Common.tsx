@@ -28,6 +28,7 @@ export const StatusBadge = ({
       case 'in_progress':
         return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
       case 'expired':
+      case 'expiring':
       case 'suspended':
       case 'cancelled':
       case 'rejected':

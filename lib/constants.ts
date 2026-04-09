@@ -91,7 +91,7 @@ export const processSteps: ProcessStep[] = [
 
 export const plans: Plan[] = [
   {
-    name: "Plan Básico",
+    name: "Básico",
     price: "60",
     target: "Para empresas que necesitan soporte esencial",
     description: "Soporte esencial para mantener tu operación en marcha.",
@@ -104,7 +104,7 @@ export const plans: Plan[] = [
     ],
   },
   {
-    name: "Plan Empresa",
+    name: "Empresarial",
     price: "80",
     popular: true,
     target: "Para PYMES operativas",

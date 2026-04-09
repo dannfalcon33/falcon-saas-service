@@ -42,13 +42,12 @@ export const PaymentHistoryTable = ({ payments }: { payments: Payment[] }) => {
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Método</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Referencia</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Estado</th>
-              <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {payments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-8 py-12 text-center text-[#8A9199] italic font-medium text-sm">
+                <td colSpan={5} className="px-8 py-12 text-center text-[#8A9199] italic font-medium text-sm">
                   No se han registrado pagos aún.
                 </td>
               </tr>
@@ -71,19 +70,6 @@ export const PaymentHistoryTable = ({ payments }: { payments: Payment[] }) => {
                   </td>
                   <td className="px-8 py-6">
                     <StatusBadge status={payment.status} />
-                  </td>
-                  <td className="px-8 py-6">
-                    {payment.proof_file_url ? (
-                      <button 
-                        onClick={() => handleViewProof(payment.proof_file_url!)}
-                        className="flex items-center gap-2 text-[10px] font-black text-[#3D7BFF] uppercase tracking-widest hover:text-white transition-colors group/btn"
-                      >
-                        <FileText className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
-                        Ver Comprobante
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-white/10 font-black uppercase tracking-widest">Sin archivo</span>
-                    )}
                   </td>
                 </tr>
               ))

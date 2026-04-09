@@ -28,6 +28,9 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,6 +65,30 @@ const Login = () => {
       setErrorMsg("Ocurrió un error inesperado al intentar iniciar sesión.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setErrorMsg("Ingresa tu correo para recuperar la contraseña.");
+      return;
+    }
+
+    setIsResetting(true);
+    setErrorMsg("");
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      });
+
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Error al enviar el correo de recuperación.");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -192,13 +219,16 @@ const Login = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Contraseña</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-[10px] font-black uppercase tracking-widest text-blue-400/60 transition hover:text-blue-300"
-                  >
-                    {showPassword ? "Ocultar" : "Mostrar"}
-                  </button>
+                  {!resetSent && (
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={isResetting}
+                      className="text-[10px] font-black uppercase tracking-widest text-[#3D7BFF]/60 transition hover:text-[#3D7BFF] disabled:opacity-50"
+                    >
+                      {isResetting ? "Enviando..." : "¿Olvidaste tu contraseña?"}
+                    </button>
+                  )}
                 </div>
                 <div className="group relative flex h-16 items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.03] px-6 transition-all focus-within:border-blue-500/40 focus-within:bg-white/[0.05]">
                   <Lock className="w-5 h-5 text-white/20 group-focus-within:text-blue-400 transition-colors" />
@@ -210,8 +240,22 @@ const Login = () => {
                     placeholder="••••••••••••"
                     className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/10 tracking-[0.2em] font-medium"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-white/20 hover:text-white transition-colors"
+                  >
+                    {showPassword ? "Ocultar" : "Mostrar"}
+                  </button>
                 </div>
               </div>
+
+              {resetSent && (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold uppercase tracking-wider flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Enlace enviado. Revisa tu correo.
+                </div>
+              )}
 
               <button
                 type="submit"

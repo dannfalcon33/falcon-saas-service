@@ -67,7 +67,7 @@ export interface Lead {
 
 export interface Client {
   id: string;
-  owner_profile_id: string;
+  owner_profile_id?: string;
   business_name: string;
   contact_name: string;
   main_email: string;
@@ -76,10 +76,14 @@ export interface Client {
   city?: string;
   zone?: string;
   address?: string;
+  billing_email?: string;
+  administrative_contact?: string;
+  invitation_sent_at?: string;
+  access_enabled_at?: string;
   status: ClientStatus;
   notes?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Subscription {

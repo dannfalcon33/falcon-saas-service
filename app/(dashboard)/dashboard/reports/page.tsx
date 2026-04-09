@@ -1,6 +1,6 @@
 import React from 'react';
 import { createServerClientComponent } from '@/lib/supabase-server';
-import { getServiceReports } from '@/lib/actions/admin.actions';
+import { getClientServiceReports } from '@/lib/actions/dashboard.actions';
 import { ServiceReportTable } from '@/components/dashboard/ServiceReportTable';
 import { redirect } from 'next/navigation';
 import { FileText, ShieldCheck, Mail } from 'lucide-react';
@@ -28,7 +28,7 @@ export default async function ClientReportsPage() {
     );
   }
 
-  const { data: reports, error } = await getServiceReports(clientId);
+  const { data: reports, error } = await getClientServiceReports(clientId);
 
   if (error) {
     console.error('Error loading reports:', error);

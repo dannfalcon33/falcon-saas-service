@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   ArrowRight,
   Upload,
-  Info
+  Info,
+  Lock
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { plans } from "@/lib/constants";
@@ -23,9 +24,8 @@ import { Plan } from "@/lib/types";
 
 const paymentMethods = [
   { id: "binance", label: "Binance Pay", icon: CreditCard, color: "#F3BA2F" },
-  { id: "pagomovil", label: "Pago Móvil", icon: Phone, color: "#3D7BFF" },
+  { id: "transferencia", label: "Pago Bancario", icon: Building2, color: "#3D7BFF" },
   { id: "zinli", label: "Zinli", icon: CreditCard, color: "#6B3CF1" },
-  { id: "transferencia", label: "Transferencia", icon: Building2, color: "#3D7BFF" },
 ];
 
 function BillingContent() {
@@ -36,8 +36,11 @@ function BillingContent() {
   const [selectedPayment, setSelectedPayment] = useState("binance");
   const [submitted, setSubmitted] = useState(false);
   
-  // Buscar el plan por nombre o usar uno por defecto
-  const plan = plans.find(p => p.name === planName) || plans[1]; // Plan Empresa por defecto
+  // Buscar el plan por nombre o usar uno por defecto (Robusto)
+  const plan = plans.find(p => 
+    p.name.toLowerCase() === planName?.toLowerCase() || 
+    p.name.toLowerCase() === planName?.replace('Plan ', '').toLowerCase()
+  ) || plans[1]; // Plan Empresa por defecto
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -47,6 +50,8 @@ function BillingContent() {
     telefono: "",
     aceptaTerminos: false,
     referencia: "",
+    password: "",
+    proofFile: null as File | null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,18 +63,23 @@ function BillingContent() {
     setIsSubmitting(true);
     
     try {
+      const data = new FormData();
+      data.append("name", `${formData.nombre} ${formData.apellido}`);
+      data.append("email", formData.correo);
+      data.append("company", formData.empresa);
+      data.append("phone", formData.telefono);
+      data.append("plan", plan.name);
+      data.append("payment_method", selectedPayment);
+      data.append("reference", formData.referencia);
+      data.append("password", formData.password);
+      
+      if (formData.proofFile) {
+        data.append("proof", formData.proofFile);
+      }
+
       const response = await fetch("/api/leads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: `${formData.nombre} ${formData.apellido}`,
-          email: formData.correo,
-          company: formData.empresa,
-          phone: formData.telefono,
-          plan: plan.name,
-          payment_method: selectedPayment,
-          reference: formData.referencia,
-        }),
+        body: data, // Using FormData
       });
 
       if (response.ok) {
@@ -146,7 +156,7 @@ function BillingContent() {
                     type="text" 
                     placeholder="Juan" 
                     className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
-                    value={formData.nombre}
+                    value={formData.nombre || ""}
                     onChange={(e) => setFormData({...formData, nombre: e.target.value})}
                   />
                 </div>
@@ -160,7 +170,7 @@ function BillingContent() {
                     type="text" 
                     placeholder="Pérez" 
                     className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
-                    value={formData.apellido}
+                    value={formData.apellido || ""}
                     onChange={(e) => setFormData({...formData, apellido: e.target.value})}
                   />
                 </div>
@@ -176,7 +186,7 @@ function BillingContent() {
                   type="text" 
                   placeholder="Tu empresa S.A." 
                   className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
-                  value={formData.empresa}
+                  value={formData.empresa || ""}
                   onChange={(e) => setFormData({...formData, empresa: e.target.value})}
                 />
               </div>
@@ -192,7 +202,7 @@ function BillingContent() {
                     type="email" 
                     placeholder="juan@empresa.com" 
                     className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
-                    value={formData.correo}
+                    value={formData.correo || ""}
                     onChange={(e) => setFormData({...formData, correo: e.target.value})}
                   />
                 </div>
@@ -206,11 +216,28 @@ function BillingContent() {
                     type="tel" 
                     placeholder="+58 412 000 0000" 
                     className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
-                    value={formData.telefono}
+                    value={formData.telefono || ""}
                     onChange={(e) => setFormData({...formData, telefono: e.target.value})}
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#C0C6CF] ml-1 uppercase opacity-60">Crea tu contraseña de acceso</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+                <input 
+                  required 
+                  type="password" 
+                  placeholder="Mínimo 6 caracteres" 
+                  minLength={6}
+                  className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
+                  value={formData.password || ""}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                />
+              </div>
+              <p className="text-[10px] text-[#8A9199] ml-1 italic font-medium">Usarás estos datos para entrar a tu dashboard después de pagar.</p>
             </div>
           </div>
 
@@ -268,70 +295,49 @@ function BillingContent() {
                   </div>
                   
                   <div className="space-y-4 mb-8">
-                    <div className="p-4 bg-black/40 rounded-xl border border-[#F3BA2F]/10 flex items-center gap-3">
-                      <Info className="w-4 h-4 text-[#F3BA2F]" />
-                      <p className="text-xs text-[#8A9199] leading-relaxed">
-                        Este MVP está configurado para simular la conexión con la API de Binance Pay. En producción, serás redirigido a la pasarela segura de Binance.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center p-12 border-2 border-dashed border-[#F3BA2F]/20 rounded-2xl bg-black/20">
-                    <div className="text-center group-hover:scale-105 transition-transform">
-                      <div className="w-16 h-16 bg-[#F3BA2F] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(243,186,47,0.3)]">
-                        <CreditCard className="w-8 h-8 text-black" />
-                      </div>
-                      <p className="text-[#F3BA2F] font-bold">Checkout con Binance Pay</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {selectedPayment === 'pagomovil' && (
-                <div className="p-8 bg-[#0B1622] border-l-4 border-[#3D7BFF] rounded-3xl">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 bg-[#3D7BFF]/10 rounded-2xl flex items-center justify-center">
-                      <Phone className="w-6 h-6 text-[#3D7BFF]" />
-                    </div>
-                    <p className="text-white font-bold text-lg">Datos para Pago Móvil</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                    <div className="p-5 bg-black/40 rounded-2xl border border-white/5">
-                      <p className="text-xs text-[#3D7BFF] font-black tracking-widest uppercase mb-3">Opción 1</p>
-                      <div className="space-y-3">
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Banco</span><span className="text-white font-medium">Bancamiga (0172)</span></div>
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Cédula / RIF</span><span className="text-white font-medium">V-25959341</span></div>
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Teléfono</span><span className="text-white font-medium">0422-0331995</span></div>
-                      </div>
-                    </div>
-                    <div className="p-5 bg-black/40 rounded-2xl border border-white/5">
-                      <p className="text-xs text-[#3D7BFF] font-black tracking-widest uppercase mb-3">Opción 2</p>
-                      <div className="space-y-3">
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Banco</span><span className="text-white font-medium">Venezuela (0102)</span></div>
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Cédula / RIF</span><span className="text-white font-medium">V-25959341</span></div>
-                        <div><span className="text-xs text-[#8A9199] block font-bold mb-0.5">Teléfono</span><span className="text-white font-medium">0416-4637506</span></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                     <label className="text-xs font-bold text-[#C0C6CF] uppercase opacity-60 ml-1">Referencia de Pago</label>
+                    <div className="space-y-4">
+                     <label className="text-xs font-bold text-[#F3BA2F] uppercase opacity-60 ml-1">ID de Transacción / Correo</label>
                      <input 
                       type="text" 
-                      placeholder="Últimos 4 o 6 dígitos" 
-                      className="w-full bg-black/50 border border-white/10 rounded-xl p-4 outline-none focus:border-[#3D7BFF] text-white" 
-                      value={formData.referencia}
+                      placeholder="Ej: Binary ID o Correo" 
+                      className="w-full bg-black/50 border border-[#F3BA2F]/20 rounded-xl p-4 outline-none focus:border-[#F3BA2F] text-white" 
+                      value={formData.referencia || ""}
                       onChange={(e) => setFormData({...formData, referencia: e.target.value})}
                     />
-                     <div className="w-full border-2 border-dashed border-white/10 rounded-2xl p-10 text-center hover:bg-white/5 hover:border-white/20 cursor-pointer transition-all flex flex-col items-center gap-3">
-                        <Upload className="w-8 h-8 text-[#3D7BFF] opacity-60" />
-                        <p className="text-sm text-[#8A9199]">Adjuntar captura de pantalla del pago</p>
-                        <p className="text-[10px] uppercase font-bold text-[#3D7BFF]/60 mt-1">Requerido para validación</p>
-                     </div>
+                    <input 
+                      type="file" 
+                      id="proof-upload-binance" 
+                      className="hidden" 
+                      accept="image/*,.pdf"
+                      onChange={(e) => setFormData({...formData, proofFile: e.target.files?.[0] || null})}
+                    />
+                    <label 
+                      htmlFor="proof-upload-binance"
+                      className={`w-full border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
+                        formData.proofFile 
+                          ? 'bg-emerald-500/5 border-emerald-500/40' 
+                          : 'border-[#F3BA2F]/10 hover:bg-[#F3BA2F]/5'
+                      }`}
+                    >
+                      {formData.proofFile ? (
+                        <>
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                          <p className="text-sm text-white font-bold">{formData.proofFile.name}</p>
+                          <p className="text-[10px] uppercase font-bold text-emerald-500/60 mt-1">Comprobante Binance listo</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-[#F3BA2F] opacity-60" />
+                          <p className="text-sm text-[#8A9199]">Cargar comprobante de Binance</p>
+                          <p className="text-[10px] uppercase font-bold text-[#F3BA2F]/60 mt-1">Captura de pantalla requerida</p>
+                        </>
+                      )}
+                    </label>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+
 
               {selectedPayment === 'zinli' && (
                 <div className="p-8 bg-[#0B1622] border-l-4 border-[#6B3CF1] rounded-3xl relative overflow-hidden">
@@ -351,11 +357,35 @@ function BillingContent() {
                   </div>
 
                   <div className="space-y-4">
-                     <div className="w-full border-2 border-dashed border-white/10 rounded-2xl p-10 text-center hover:bg-white/5 hover:border-white/20 cursor-pointer transition-all flex flex-col items-center gap-3">
-                        <Upload className="w-8 h-8 text-[#6B3CF1] opacity-60" />
-                        <p className="text-sm text-[#8A9199]">Adjuntar captura del pago Zinli</p>
-                        <p className="text-[10px] uppercase font-bold text-[#6B3CF1]/60 mt-1">Requerido para reporte manual</p>
-                     </div>
+                     <input 
+                        type="file" 
+                        id="proof-upload-zinli" 
+                        className="hidden" 
+                        accept="image/*,.pdf"
+                        onChange={(e) => setFormData({...formData, proofFile: e.target.files?.[0] || null})}
+                      />
+                     <label 
+                        htmlFor="proof-upload-zinli"
+                        className={`w-full border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
+                          formData.proofFile 
+                            ? 'bg-emerald-500/5 border-emerald-500/40' 
+                            : 'border-white/10 hover:bg-white/5 hover:border-white/20'
+                        }`}
+                     >
+                        {formData.proofFile ? (
+                          <>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                            <p className="text-sm text-white font-bold">{formData.proofFile.name}</p>
+                            <p className="text-[10px] uppercase font-bold text-emerald-500/60 mt-1">Archivo seleccionado</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-[#6B3CF1] opacity-60" />
+                            <p className="text-sm text-[#8A9199]">Adjuntar captura del pago Zinli</p>
+                            <p className="text-[10px] uppercase font-bold text-[#6B3CF1]/60 mt-1">Requerido para reporte manual</p>
+                          </>
+                        )}
+                     </label>
                   </div>
                 </div>
               )}
@@ -366,44 +396,102 @@ function BillingContent() {
                     <div className="w-12 h-12 bg-[#3D7BFF]/10 rounded-2xl flex items-center justify-center">
                       <Building2 className="w-6 h-6 text-[#3D7BFF]" />
                     </div>
-                    <p className="text-white font-bold text-lg">Cuentas para Transferencia</p>
+                    <p className="text-white font-bold text-lg">Cuentas para Pago Bancario</p>
                   </div>
                   
                   <div className="space-y-4 mb-10">
-                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
+                    {/* Transferencia 1 */}
+                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden group hover:border-[#3D7BFF]/30 transition-all">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-[#3D7BFF]/5 rounded-bl-full"></div>
                       <div className="flex justify-between items-start mb-4">
-                        <p className="text-xs text-[#3D7BFF] font-black tracking-widest uppercase">Bancamiga (0172)</p>
-                        <span className="text-[10px] bg-[#3D7BFF]/10 text-[#3D7BFF] px-2 py-0.5 rounded font-bold">Corriente</span>
+                        <p className="text-xs text-[#3D7BFF] font-black tracking-widest uppercase">Transferencia: Bancamiga</p>
+                        <span className="text-[10px] bg-[#3D7BFF]/10 text-[#3D7BFF] px-2 py-0.5 rounded font-bold uppercase">0172</span>
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-white font-mono text-lg tracking-tight">0172-0194-86-194510776</p>
-                        <div className="flex flex-col text-[11px] text-[#8A9199] font-medium">
-                          <span>Titular: Yoshua Daniel Soto</span>
-                          <span>RIF/CI: V-25959341</span>
-                        </div>
+                      <p className="text-white font-mono text-xl tracking-tighter mb-3">0172-0194-86-194510776</p>
+                      <div className="grid grid-cols-2 gap-4 text-[11px]">
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Titular</span><span className="text-white">Yoshua Daniel Soto</span></div>
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">RIF/CI</span><span className="text-white">V-25959341</span></div>
                       </div>
                     </div>
-                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
+
+                    {/* Transferencia 2 */}
+                    <div className="p-6 bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden group hover:border-[#3D7BFF]/30 transition-all">
                       <div className="flex justify-between items-start mb-4">
-                        <p className="text-xs text-[#3D7BFF] font-black tracking-widest uppercase">Banco de Venezuela (0102)</p>
-                        <span className="text-[10px] bg-[#3D7BFF]/10 text-[#3D7BFF] px-2 py-0.5 rounded font-bold">Corriente</span>
+                        <p className="text-xs text-white/40 font-black tracking-widest uppercase">Transferencia: Venezuela (BDV)</p>
+                        <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded font-bold uppercase">0102</span>
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-white font-mono text-lg tracking-tight">01020732120000080130</p>
-                        <div className="flex flex-col text-[11px] text-[#8A9199] font-medium">
-                          <span>Titular: Yoshua Daniel Soto</span>
-                          <span>RIF/CI: V-25959341</span>
-                        </div>
+                      <p className="text-white font-mono text-xl tracking-tighter mb-3">01020732120000080130</p>
+                      <div className="grid grid-cols-2 gap-4 text-[11px]">
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Titular</span><span className="text-white">Yoshua Daniel Soto</span></div>
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">RIF/CI</span><span className="text-white">V-25959341</span></div>
+                      </div>
+                    </div>
+
+                    {/* Pago Movil 1 */}
+                    <div className="p-6 bg-[#1F3A5F]/5 border border-[#3D7BFF]/20 rounded-2xl relative overflow-hidden group hover:bg-[#1F3A5F]/10 transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <p className="text-xs text-white font-black tracking-widest uppercase">Pago Móvil: Bancamiga</p>
+                        <Phone className="w-4 h-4 text-[#3D7BFF]" />
+                      </div>
+                      <p className="text-white font-mono text-2xl font-bold tracking-tight mb-3">0422-0331995</p>
+                      <div className="grid grid-cols-2 gap-4 text-[11px]">
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Cédula</span><span className="text-white">V-25959341</span></div>
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Banco</span><span className="text-white">0172</span></div>
+                      </div>
+                    </div>
+
+                    {/* Pago Movil 2 */}
+                    <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.04] transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <p className="text-xs text-[#8A9199] font-black tracking-widest uppercase">Pago Móvil: Venezuela (BDV)</p>
+                        <Phone className="w-4 h-4 text-white/40" />
+                      </div>
+                      <p className="text-white font-mono text-2xl font-bold tracking-tight mb-3">0416-4637506</p>
+                      <div className="grid grid-cols-2 gap-4 text-[11px]">
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Cédula</span><span className="text-white">V-25959341</span></div>
+                         <div><span className="text-[#8A9199] block font-bold uppercase mb-0.5">Banco</span><span className="text-white">0102</span></div>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                     <div className="w-full border-2 border-dashed border-white/10 rounded-2xl p-10 text-center hover:bg-white/5 hover:border-white/20 cursor-pointer transition-all flex flex-col items-center gap-3">
-                        <Upload className="w-8 h-8 text-[#3D7BFF] opacity-60" />
-                        <p className="text-sm text-[#8A9199]">Adjuntar comprobante de transferencia</p>
-                        <p className="text-[10px] uppercase font-bold text-[#3D7BFF]/60 mt-1">Procesamos en horario de oficina</p>
-                     </div>
+                     <label className="text-xs font-bold text-[#C0C6CF] uppercase opacity-60 ml-1">Referencia o ID de Pago</label>
+                     <input 
+                      type="text" 
+                      placeholder="Número de referencia bancaria o pago móvil" 
+                      className="w-full bg-black/50 border border-white/10 rounded-xl p-4 outline-none focus:border-[#3D7BFF] text-white" 
+                      value={formData.referencia || ""}
+                      onChange={(e) => setFormData({...formData, referencia: e.target.value})}
+                    />
+                     <input 
+                        type="file" 
+                        id="proof-upload-trans" 
+                        className="hidden" 
+                        accept="image/*,.pdf"
+                        onChange={(e) => setFormData({...formData, proofFile: e.target.files?.[0] || null})}
+                      />
+                     <label 
+                        htmlFor="proof-upload-trans"
+                        className={`w-full border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
+                          formData.proofFile 
+                            ? 'bg-emerald-500/5 border-emerald-500/40' 
+                            : 'border-white/10 hover:bg-white/5 hover:border-white/20'
+                        }`}
+                     >
+                        {formData.proofFile ? (
+                          <>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                            <p className="text-sm text-white font-bold">{formData.proofFile.name}</p>
+                            <p className="text-[10px] uppercase font-bold text-emerald-500/60 mt-1">Archivo seleccionado</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-[#3D7BFF] opacity-60" />
+                            <p className="text-sm text-[#8A9199]">Adjuntar captura de pantalla (PDF/Imagen)</p>
+                            <p className="text-[10px] uppercase font-bold text-[#3D7BFF]/60 mt-1">Obligatorio para validación bancaria</p>
+                          </>
+                        )}
+                     </label>
                   </div>
                 </div>
               )}
@@ -479,16 +567,16 @@ function BillingContent() {
             
             <div className="max-h-[300px] overflow-y-auto pr-4 custom-scrollbar-thin space-y-3">
               {[
-                { label: "Público Objetivo", value: plan.name === "Plan Pymes" ? "Pequeñas empresas" : plan.name === "Plan Empresa" ? "PYMES operativas" : "Empresas críticas" },
-                { label: "Soporte Remoto", value: plan.name === "Plan Pymes" ? "Limitado" : plan.name === "Plan Empresa" ? "Prioritario" : "VIP Prioritario" },
-                { label: "Visitas Presenciales", value: plan.name === "Plan Pymes" ? "2 mensuales" : plan.name === "Plan Empresa" ? "4 mensuales" : "Según necesidad" },
-                { label: "Tiempo de Respuesta", value: plan.name === "Plan Pymes" ? "24–48 horas" : plan.name === "Plan Empresa" ? "12–24 horas" : "4–8 horas" },
-                { label: "Mantenimiento", value: plan.name === "Plan Pymes" ? "Correctivo" : plan.name === "Plan Empresa" ? "Preventivo + Correctivo" : "Optimización Continua" },
-                { label: "Respaldo en Nube", value: plan.name === "Plan Pymes" ? "No Incluido" : plan.name === "Plan Empresa" ? "Gestión Incluida" : "Gestión + Verificación" },
-                { label: "Backup Local", value: plan.name === "Plan Pymes" ? "Básico" : "Incluido + Gestión" },
-                { label: "Control de Backups", value: plan.name === "Plan Pymes" ? "No" : plan.name === "Plan Empresa" ? "Básico" : "Periódico" },
-                { label: "Asesoría Técnica", value: plan.name === "Plan Pymes" ? "No" : plan.name === "Plan Empresa" ? "Básica" : "Continua VIP" },
-                { label: "Monitoreo", value: plan.name === "Plan Pymes" ? "No" : plan.name === "Plan Empresa" ? "Básico" : "Activo 24/7" },
+                { label: "Público Objetivo", value: plan.name === "Básico" ? "Pequeñas empresas" : plan.name === "Empresarial" ? "PYMES operativas" : "Empresas críticas" },
+                { label: "Soporte Remoto", value: plan.name === "Básico" ? "Limitado" : plan.name === "Empresarial" ? "Prioritario" : "VIP Prioritario" },
+                { label: "Visitas Presenciales", value: plan.name === "Básico" ? "2 mensuales" : plan.name === "Empresarial" ? "4 mensuales" : "Según necesidad" },
+                { label: "Tiempo de Respuesta", value: plan.name === "Básico" ? "24–48 horas" : plan.name === "Empresarial" ? "12–24 horas" : "4–8 horas" },
+                { label: "Mantenimiento", value: plan.name === "Básico" ? "Correctivo" : plan.name === "Empresarial" ? "Preventivo + Correctivo" : "Optimización Continua" },
+                { label: "Respaldo en Nube", value: plan.name === "Básico" ? "No Incluido" : plan.name === "Empresarial" ? "Gestión Incluida" : "Gestión + Verificación" },
+                { label: "Backup Local", value: plan.name === "Básico" ? "Básico" : "Incluido + Gestión" },
+                { label: "Control de Backups", value: plan.name === "Básico" ? "No" : plan.name === "Empresarial" ? "Básico" : "Periódico" },
+                { label: "Asesoría Técnica", value: plan.name === "Básico" ? "No" : plan.name === "Empresarial" ? "Básica" : "Continua VIP" },
+                { label: "Monitoreo", value: plan.name === "Básico" ? "No" : plan.name === "Empresarial" ? "Básico" : "Activo 24/7" },
               ].map((spec, i) => (
                 <div key={i} className="flex justify-between items-center text-[11px] border-b border-white/5 pb-3 last:border-0 transition-all hover:bg-white/5 rounded-lg px-2 py-1 group/spec">
                   <span className="text-[#8A9199] font-medium group-hover/spec:text-[#C0C6CF]">{spec.label}</span>

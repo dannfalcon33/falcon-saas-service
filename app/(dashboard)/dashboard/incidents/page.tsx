@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { IncidentForm } from '@/components/dashboard/IncidentForm';
 import { IncidentTable } from '@/components/dashboard/IncidentTable';
+import { getClientIncidents } from '@/lib/actions/dashboard.actions';
 import { createClient } from '@/lib/supabase';
 import { Plus, X, ListFilter, Activity } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
@@ -15,14 +16,7 @@ export default function ClientIncidentsPage() {
   const [clientId, setClientId] = useState<string | null>(null);
 
   const fetchIncidents = async (cid: string) => {
-    const { data } = await supabase
-      .from('incidents')
-      .select(`
-        *,
-        technician:assigned_to (full_name)
-      `)
-      .eq('client_id', cid)
-      .order('reported_at', { ascending: false });
+    const { data } = await getClientIncidents(cid);
     
     if (data) setIncidents(data);
     setIsLoading(false);
