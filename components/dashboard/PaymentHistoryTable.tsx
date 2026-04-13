@@ -4,18 +4,7 @@ import React from 'react';
 import { StatusBadge } from './Common';
 import { Download, Eye } from 'lucide-react';
 import { getSignedUrl } from '@/lib/actions/dashboard.actions';
-
-interface Payment {
-  id: string;
-  amount_usd: number;
-  payment_method: string;
-  reference_code: string;
-  status: string;
-  submitted_at: string;
-  verified_at?: string;
-  proof_file_url?: string;
-  proof_file_path?: string;
-}
+import { Payment } from '@/lib/types';
 
 export const PaymentHistoryTable = ({ payments }: { payments: Payment[] }) => {
   const formatDate = (value: string) => {
@@ -74,8 +63,8 @@ export const PaymentHistoryTable = ({ payments }: { payments: Payment[] }) => {
               payments.map((payment) => (
                 <tr key={payment.id} className="group hover:bg-white/[0.01] transition-colors">
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-white">{formatDate(payment.submitted_at)}</p>
-                    <p className="text-[10px] text-[#8A9199] font-medium">{formatTime(payment.submitted_at)}</p>
+                    <p className="text-sm font-bold text-white">{formatDate(payment.submitted_at || payment.created_at)}</p>
+                    <p className="text-[10px] text-[#8A9199] font-medium">{formatTime(payment.submitted_at || payment.created_at)}</p>
                   </td>
                   <td className="px-8 py-6">
                     <span className="text-sm font-black text-white">${payment.amount_usd}</span>
@@ -85,7 +74,7 @@ export const PaymentHistoryTable = ({ payments }: { payments: Payment[] }) => {
                     <span className="text-xs font-bold text-[#C0C6CF] capitalize">{payment.payment_method.replace('_', ' ')}</span>
                   </td>
                   <td className="px-8 py-6">
-                    <code className="text-[10px] bg-white/5 px-2 py-1 rounded-md text-[#3D7BFF] font-black tracking-widest">{payment.reference_code}</code>
+                    <code className="text-[10px] bg-white/5 px-2 py-1 rounded-md text-[#3D7BFF] font-black tracking-widest">{payment.reference_code || 'N/A'}</code>
                   </td>
                   <td className="px-8 py-6">
                     <StatusBadge status={payment.status} />
