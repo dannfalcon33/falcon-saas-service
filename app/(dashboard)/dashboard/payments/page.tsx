@@ -1,21 +1,18 @@
 import React from 'react';
-import { createServerClientComponent } from '@/lib/supabase-server';
-import { getPaymentHistory, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
+import { getAuthenticatedClientContext, getPaymentHistory, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
 import { UploadProofForm } from '@/components/dashboard/UploadProofForm';
 import { PaymentHistoryTable } from '@/components/dashboard/PaymentHistoryTable';
 import { CreditCard, ShieldCheck, Info } from 'lucide-react';
+import { createServerClientComponent } from '@/lib/supabase-server';
 
 export default async function ClientPaymentsPage() {
+  const { clientId } = await getAuthenticatedClientContext();
   const supabase = await createServerClientComponent();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return null;
-
-  // Get client ID
   const { data: client } = await supabase
     .from('clients')
     .select('id, business_name')
-    .eq('owner_profile_id', user.id)
+    .eq('id', clientId)
     .single();
 
   if (!client) return <div>No se encontró el cliente.</div>;

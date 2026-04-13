@@ -1,32 +1,11 @@
 import React from 'react';
-import { createServerClientComponent } from '@/lib/supabase-server';
-import { getClientServiceReports } from '@/lib/actions/dashboard.actions';
+import { getAuthenticatedClientContext, getClientServiceReports } from '@/lib/actions/dashboard.actions';
 import { ServiceReportTable } from '@/components/dashboard/ServiceReportTable';
 import { redirect } from 'next/navigation';
 import { FileText, ShieldCheck, Mail } from 'lucide-react';
 
 export default async function ClientReportsPage() {
-  const supabase = await createServerClientComponent();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  // Get client ID
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, clients:clients(id)')
-    .eq('id', user.id)
-    .single();
-
-  const clientId = profile?.clients?.[0]?.id;
-
-  if (!clientId) {
-    return (
-      <div className="p-12 text-center bg-white/5 border border-white/5 rounded-[2.5rem]">
-        <p className="text-white/40 font-serif italic tracking-widest uppercase">No hay información de cliente asociada.</p>
-      </div>
-    );
-  }
+  const { clientId } = await getAuthenticatedClientContext();
 
   const { data: reports, error } = await getClientServiceReports(clientId);
 

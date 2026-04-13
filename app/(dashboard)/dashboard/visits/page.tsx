@@ -1,41 +1,28 @@
 import React from 'react';
-import { createServerClientComponent } from '@/lib/supabase-server';
-import { getClientVisits } from '@/lib/actions/dashboard.actions';
+import { 
+  getAuthenticatedClientContext, 
+  getClientVisits, 
+  getClientDashboardData,
+  getPendingVisitRequests 
+} from '@/lib/actions/dashboard.actions';
 import { ClientVisitView } from '@/components/dashboard/ClientVisitView';
-import { redirect } from 'next/navigation';
+import { VisitManagementSection } from '@/components/dashboard/VisitManagementSection';
 
 export default async function ClientVisitsPage() {
-  const supabase = await createServerClientComponent();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { clientId, subscriptionId } = await getAuthenticatedClientContext();
 
-  if (!user) redirect('/login');
-
-  // We need the client_id for this profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, clients:clients(id)')
-    .eq('id', user.id)
-    .single();
-
-  const clientId = profile?.clients?.[0]?.id;
-
-  if (!clientId) {
-    return (
-      <div className="p-12 text-center bg-white/5 border border-white/5 rounded-[2.5rem]">
-        <p className="text-white/40 font-serif italic tracking-widest uppercase">No hay información de cliente asociada a esta cuenta.</p>
-      </div>
-    );
-  }
-
-  const { data: visits, error } = await getClientVisits(clientId);
-
-  if (error) {
-    console.error('Error loading client visits:', error);
-    return <div>Error al cargar visitas.</div>;
-  }
+  const [
+    { data: visits },
+    { data: dashboardData },
+    { data: pendingRequests }
+  ] = await Promise.all([
+    getClientVisits(clientId),
+    getClientDashboardData(clientId),
+    getPendingVisitRequests(clientId)
+  ]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-20">
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#3D7BFF]/10 rounded-full border border-[#3D7BFF]/20 text-[#3D7BFF] text-[10px] font-black uppercase tracking-widest mb-2 font-serif">
           Transparencia en el Servicio
@@ -46,7 +33,20 @@ export default async function ClientVisitsPage() {
         <p className="text-[#8A9199] font-medium italic">Agenda detallada de mantenimiento y soporte presencial programado.</p>
       </div>
 
-      <ClientVisitView visits={visits || []} />
+      {/* Interactive Management Section */}
+      <VisitManagementSection 
+        clientId={clientId}
+        subscriptionId={subscriptionId}
+        visitStats={dashboardData?.subscriptionStats}
+        pendingRequests={pendingRequests || []}
+      />
+
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+           <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Historial Operativo</h3>
+        </div>
+        <ClientVisitView visits={visits || []} />
+      </div>
     </div>
   );
 }

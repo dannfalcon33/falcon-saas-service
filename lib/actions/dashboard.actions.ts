@@ -3,6 +3,47 @@
 import { createServerClientComponent, supabaseAdmin } from '@/lib/supabase-server';
 import { Subscription, Payment, Incident, PaymentMethod, IncidentPriority } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+/**
+ * Unified logic to identify the current authenticated client.
+ * Returns core IDs and objects, or redirects if authentication/profile is missing.
+ */
+export async function getAuthenticatedClientContext() {
+  const supabase = await createServerClientComponent();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  const { data, error } = await supabase
+    .from('v_client_access_status')
+    .select('*')
+    .eq('profile_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    redirect('/dashboard/pending');
+  }
+
+  // Mandatory checks for active service
+  if (data.client_status !== 'active' || data.subscription_status !== 'active') {
+    // If it exists but is not fully active, we might still allow restricted access 
+    // depending on the status, but for now we follow the "active" rule.
+    if (data.client_status === 'pending' || data.subscription_status === 'pending_payment') {
+      redirect('/dashboard/pending');
+    }
+    // Handle restricted/suspended in the future
+  }
+
+  return {
+    user,
+    clientId: data.client_id as string,
+    subscriptionId: data.subscription_id as string,
+    clientStatus: data.client_status,
+    subscriptionStatus: data.subscription_status,
+    // We can also fetch the full objects if needed, but IDs are the core requirement
+  };
+}
 
 /**
  * Get the current active subscription for a client
@@ -160,6 +201,51 @@ export async function getSignedUrl(path: string, bucket: string = 'payment-proof
 }
 
 /**
+ * SECURE: Generate a signed URL for a service report after verifying ownership.
+ * This should be used for all report downloads.
+ */
+export async function getSecureReportUrl(reportId: string) {
+  // 1. Get client context
+  const { clientId } = await getAuthenticatedClientContext();
+  
+  // 2. Use admin to bypass RLS and verify report ownership
+  if (!supabaseAdmin) throw new Error("Servidor no configurado");
+  
+  const { data: report, error: reportError } = await supabaseAdmin
+    .from('service_reports')
+    .select('file_path, client_id')
+    .eq('id', reportId)
+    .single();
+    
+  if (reportError || !report) {
+    console.error(`Secure Report Error: Report ${reportId} not found or inaccessible.`);
+    return { data: null, error: new Error("Reporte no encontrado") };
+  }
+  
+  // 3. Verify match
+  if (report.client_id !== clientId) {
+    console.error(`Secure Report Violation: Client ${clientId} attempted to access Report ${reportId} (owned by ${report.client_id})`);
+    return { data: null, error: new Error("Acceso denegado") };
+  }
+  
+  if (!report.file_path) {
+    return { data: null, error: new Error("El reporte no tiene un archivo asociado") };
+  }
+  
+  // 4. Generate signed URL as admin to ensure success
+  const { data: signedData, error: signedError } = await supabaseAdmin.storage
+    .from('service-reports')
+    .createSignedUrl(report.file_path, 300); // 5 minutes
+    
+  if (signedError) {
+    console.error(`Storage Error: ${signedError.message}`);
+    return { data: null, error: signedError };
+  }
+  
+  return { data: signedData.signedUrl, error: null };
+}
+
+/**
  * Get visits for a specific client
  */
 export async function getClientVisits(clientId: string) {
@@ -225,12 +311,23 @@ export async function getClientDashboardData(clientId: string) {
     .limit(1)
     .maybeSingle();
 
+  // 5. Subscription Stats (Visits)
+  const { data: subscription } = await db
+    .from('subscriptions')
+    .select('visit_used_count, visit_available_count, is_unlimited_snapshot, visit_limit_snapshot')
+    .eq('client_id', clientId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return {
     data: {
       nextVisit,
       openIncidents: openIncidents || 0,
       lastReport,
-      lastPayment
+      lastPayment,
+      subscriptionStats: subscription
     },
     error: null
   };
@@ -248,7 +345,7 @@ export type ClientAccessState =
   | { status: 'no-profile' };
 
 /**
- * Get all incidents for a specific client
+ * Get all technical incidents for a specific client (excluding visit requests)
  */
 export async function getClientIncidents(clientId: string) {
   const db = supabaseAdmin || await createServerClientComponent();
@@ -259,6 +356,7 @@ export async function getClientIncidents(clientId: string) {
       technician:assigned_to (full_name)
     `)
     .eq('client_id', clientId)
+    .neq('title', 'Solicitud de visita técnica')
     .order('reported_at', { ascending: false });
 
   if (error) {
@@ -266,6 +364,61 @@ export async function getClientIncidents(clientId: string) {
     return { data: null, error };
   }
 
+  return { data, error: null };
+}
+
+/**
+ * Get pending visit requests (stored in incidents table with specific title)
+ */
+export async function getPendingVisitRequests(clientId: string) {
+  const db = supabaseAdmin || await createServerClientComponent();
+  const { data, error } = await db
+    .from('incidents')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('title', 'Solicitud de visita técnica')
+    .eq('status', 'open')
+    .order('reported_at', { ascending: false });
+
+  if (error) {
+    console.error(`Error fetching pending visit requests: ${error.message}`);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+/**
+ * Request a technical visit (standalone action)
+ */
+export async function requestVisit(formData: {
+  clientId: string;
+  subscriptionId?: string;
+  description: string;
+  priority: IncidentPriority;
+}) {
+  const supabase = await createServerClientComponent();
+  const { data, error } = await supabase
+    .from('incidents')
+    .insert({
+      client_id: formData.clientId,
+      subscription_id: formData.subscriptionId,
+      title: 'Solicitud de visita técnica',
+      description: formData.description,
+      priority: formData.priority,
+      status: 'open',
+      channel: 'dashboard',
+      reported_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error requesting visit:', error);
+    return { data: null, error };
+  }
+
+  revalidatePath('/dashboard/visits');
   return { data, error: null };
 }
 

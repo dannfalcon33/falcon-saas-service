@@ -296,30 +296,135 @@ export async function getVisits() {
 
 export async function createVisit(visitData: Partial<Visit>) {
   const supabase = await createServerClientComponent();
-  const { data, error } = await supabase
+  
+  const { data: visit, error: visitError } = await supabase
     .from('visits')
     .insert(visitData)
     .select()
     .single();
   
-  if (!error) revalidatePath('/admin/visits');
-  return { data, error };
+  if (visitError) return { data: null, error: visitError };
+
+  // Logic: Deduct from subscription if it's an 'included' visit
+  if (visit.visit_type === 'included' && visit.client_id) {
+    // 1. Find active subscription
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id, visit_used_count, visit_available_count')
+      .eq('client_id', visit.client_id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (sub) {
+      // 2. Update stats
+      await supabase
+        .from('subscriptions')
+        .update({
+          visit_used_count: sub.visit_used_count + 1,
+          visit_available_count: Math.max(0, sub.visit_available_count - 1),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sub.id);
+        
+      // Also tag the visit with the subscription ID if it wasn't there
+      if (!visit.subscription_id) {
+        await supabase.from('visits').update({ subscription_id: sub.id }).eq('id', visit.id);
+      }
+    }
+  }
+
+  revalidatePath('/admin/visits');
+  revalidatePath('/dashboard/visits');
+  revalidatePath('/dashboard');
+  
+  return { data: visit, error: null };
 }
 
 export async function updateVisit(id: string, visitData: Partial<Visit>) {
   const supabase = await createServerClientComponent();
-  const { data, error } = await supabase
+  
+  // 1. Get current state to check for type changes
+  const { data: oldVisit } = await supabase
+    .from('visits')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  const { data: visit, error } = await supabase
     .from('visits')
     .update(visitData)
     .eq('id', id)
     .select()
     .single();
   
+  if (error) return { data: null, error };
+
+  // 2. Logic: Handle visit_type toggles
+  if (oldVisit && oldVisit.visit_type !== visit.visit_type) {
+    const subId = visit.subscription_id;
+    if (subId) {
+      const { data: sub } = await supabase.from('subscriptions').select('*').eq('id', subId).single();
+      if (sub) {
+        let newUsed = sub.visit_used_count;
+        let newAvail = sub.visit_available_count;
+
+        // Transition TO included
+        if (visit.visit_type === 'included') {
+          newUsed++;
+          newAvail = Math.max(0, newAvail - 1);
+        } 
+        // Transition FROM included
+        else if (oldVisit.visit_type === 'included') {
+          newUsed = Math.max(0, newUsed - 1);
+          newAvail++;
+        }
+
+        await supabase.from('subscriptions').update({
+          visit_used_count: newUsed,
+          visit_available_count: newAvail,
+          updated_at: new Date().toISOString()
+        }).eq('id', subId);
+      }
+    }
+  }
+  
+  revalidatePath('/admin/visits');
+  revalidatePath('/dashboard/visits');
+  revalidatePath('/dashboard');
+  
+  return { data: visit, error };
+}
+
+/**
+ * Delete a visit and revert counts if it was 'included'
+ */
+export async function deleteVisit(id: string) {
+  const supabase = await createServerClientComponent();
+
+  // 1. Get visit before deletion
+  const { data: visit } = await supabase.from('visits').select('*').eq('id', id).single();
+  
+  if (visit && visit.visit_type === 'included' && visit.subscription_id) {
+    // 2. Revert counts in subscription
+    const { data: sub } = await supabase.from('subscriptions').select('*').eq('id', visit.subscription_id).single();
+    if (sub) {
+      await supabase.from('subscriptions').update({
+        visit_used_count: Math.max(0, sub.visit_used_count - 1),
+        visit_available_count: sub.visit_available_count + 1,
+        updated_at: new Date().toISOString()
+      }).eq('id', sub.id);
+    }
+  }
+
+  const { error } = await supabase.from('visits').delete().eq('id', id);
+
   if (!error) {
     revalidatePath('/admin/visits');
     revalidatePath('/dashboard/visits');
+    revalidatePath('/dashboard');
   }
-  return { data, error };
+
+  return { error };
 }
 
 // Incident Management

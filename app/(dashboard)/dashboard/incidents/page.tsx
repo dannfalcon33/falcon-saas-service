@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { IncidentForm } from '@/components/dashboard/IncidentForm';
 import { IncidentTable } from '@/components/dashboard/IncidentTable';
-import { getClientIncidents } from '@/lib/actions/dashboard.actions';
+import { getClientIncidents, getAuthenticatedClientContext, getClientDashboardData, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
 import { createClient } from '@/lib/supabase';
 import { Plus, X, ListFilter, Activity } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
@@ -14,32 +14,34 @@ export default function ClientIncidentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
-
+  const [subscription, setSubscription] = useState<any>(null);
   const fetchIncidents = async (cid: string) => {
     const { data } = await getClientIncidents(cid);
-    
     if (data) setIncidents(data);
-    setIsLoading(false);
   };
 
   useEffect(() => {
-    const getProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*, clients:clients(id)')
-          .eq('id', user.id)
-          .single();
+    const getContext = async () => {
+      try {
+        const { clientId } = await getAuthenticatedClientContext();
+        setClientId(clientId);
         
-        const cid = profile?.clients?.[0]?.id;
-        if (cid) {
-          setClientId(cid);
-          fetchIncidents(cid);
-        }
+        // Fetch incidents and subscription
+        const [incidentsRes, subRes] = await Promise.all([
+          getClientIncidents(clientId),
+          getCurrentSubscription(clientId)
+        ]);
+
+        if (incidentsRes.data) setIncidents(incidentsRes.data);
+        if (subRes.data) setSubscription(subRes.data);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching client context:', error);
+        setIsLoading(false);
       }
     };
-    getProfile();
+    getContext();
   }, []);
 
   if (isLoading) {
@@ -96,6 +98,7 @@ export default function ClientIncidentsPage() {
           <div className="animate-in fade-in slide-in-from-top-4 duration-500">
             <IncidentForm 
               clientId={clientId!} 
+              subscriptionId={subscription?.id}
               onSuccess={() => {
                 setShowForm(false);
                 fetchIncidents(clientId!);

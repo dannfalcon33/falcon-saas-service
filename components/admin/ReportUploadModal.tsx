@@ -35,6 +35,7 @@ export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) =
     incidentId: '',
     title: '',
     summary: '',
+    work_performed: '',
     recommendations: '',
   });
 
@@ -89,9 +90,10 @@ export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) =
         incident_id: formData.incidentId || null,
         title: formData.title,
         summary: formData.summary,
+        work_performed: formData.work_performed,
         recommendations: formData.recommendations,
         file_path: filePath,
-        file_url: null, // We use signed URLs later
+        file_url: null, // We use signed URLs now
       });
 
       if (dbError) throw dbError;
@@ -184,12 +186,39 @@ export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) =
               <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-2">Resumen Ejecutivo</label>
               <textarea 
                 required
-                rows={3}
-                placeholder="Breve descripción de los hallazgos y trabajos realizados..."
+                rows={2}
+                placeholder="Breve descripción general para el cliente..."
                 value={formData.summary}
                 onChange={(e) => setFormData({...formData, summary: e.target.value})}
-                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all resize-none"
+                className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all resize-none placeholder:text-white/10"
               />
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Work Performed */}
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-2">Trabajo Realizado</label>
+                 <textarea 
+                   required
+                   rows={4}
+                   placeholder="Detalle técnico de las acciones tomadas..."
+                   value={formData.work_performed}
+                   onChange={(e) => setFormData({...formData, work_performed: e.target.value})}
+                   className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all resize-none placeholder:text-white/10"
+                 />
+              </div>
+
+              {/* Recommendations */}
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-2">Recomendaciones Técnico-Económicas</label>
+                 <textarea 
+                   rows={4}
+                   placeholder="Sugerencias, repuestos necesarios o mejoras..."
+                   value={formData.recommendations}
+                   onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
+                   className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all resize-none placeholder:text-white/10"
+                 />
+              </div>
            </div>
 
            {/* Archivo */}

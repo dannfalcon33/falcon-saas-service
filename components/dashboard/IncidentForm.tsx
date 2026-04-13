@@ -22,8 +22,14 @@ interface IncidentFormProps {
   onCancel?: () => void;
 }
 
-export const IncidentForm = ({ clientId, subscriptionId, onSuccess, onCancel }: IncidentFormProps) => {
+export const IncidentForm = ({ 
+  clientId, 
+  subscriptionId, 
+  onSuccess, 
+  onCancel 
+}: IncidentFormProps) => {
   const router = useRouter();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -70,9 +76,13 @@ export const IncidentForm = ({ clientId, subscriptionId, onSuccess, onCancel }: 
           <div className="space-y-1">
              <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
-                <h2 className="text-2xl font-serif font-bold text-white tracking-tight">Reportar Incidencia</h2>
+                <h2 className="text-2xl font-serif font-bold text-white tracking-tight">
+                  Reportar Incidencia Técnica
+                </h2>
              </div>
-             <p className="text-xs text-[#8A9199] font-medium italic uppercase tracking-widest font-serif">Notifica una falla técnica para atención inmediata.</p>
+             <p className="text-xs text-[#8A9199] font-medium italic uppercase tracking-widest font-serif">
+               Notifica una falla de hardware o software para atención inmediata.
+             </p>
           </div>
           {onCancel && (
             <button onClick={onCancel} className="p-2 hover:bg-white/5 rounded-xl transition-all">
@@ -129,7 +139,9 @@ export const IncidentForm = ({ clientId, subscriptionId, onSuccess, onCancel }: 
 
              {/* Descripción */}
              <div className="space-y-2 col-span-full">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-2">Descripción Detallada</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-2">
+                  Descripción Detallada
+                </label>
                 <textarea 
                   required
                   rows={4}
@@ -144,7 +156,7 @@ export const IncidentForm = ({ clientId, subscriptionId, onSuccess, onCancel }: 
           <div className="flex justify-end pt-4">
              <button 
                disabled={isLoading}
-               className="flex items-center gap-3 px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)] disabled:opacity-50"
+               className="flex items-center gap-3 px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50"
              >
                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                Enviar Reporte de Falla
