@@ -1,9 +1,58 @@
 'use server';
 
 import { createServerClientComponent, supabaseAdmin } from '@/lib/supabase-server';
-import { Subscription, Payment, Incident, PaymentMethod, IncidentPriority } from '@/lib/types';
+import { Subscription, Payment, Incident, PaymentMethod, IncidentPriority, VisitRequest } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+
+function serializeErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
+
+function normalizeStoragePath(path: string, bucket: string) {
+  const trimmed = path.trim();
+  if (!trimmed) return '';
+
+  let normalized = trimmed;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      normalized = decodeURIComponent(url.pathname);
+    } catch {
+      normalized = trimmed;
+    }
+  }
+
+  normalized = normalized.replace(/^\/+/, '');
+
+  // Remove known supabase storage prefixes
+  const objectPrefix = `storage/v1/object/${bucket}/`;
+  if (normalized.startsWith(objectPrefix)) {
+    normalized = normalized.slice(objectPrefix.length);
+  }
+
+  const objectPublicPrefix = `storage/v1/object/public/${bucket}/`;
+  if (normalized.startsWith(objectPublicPrefix)) {
+    normalized = normalized.slice(objectPublicPrefix.length);
+  }
+
+  const objectSignPrefix = `storage/v1/object/sign/${bucket}/`;
+  if (normalized.startsWith(objectSignPrefix)) {
+    normalized = normalized.slice(objectSignPrefix.length);
+  }
+
+  if (normalized.startsWith(`${bucket}/`)) {
+    normalized = normalized.slice(bucket.length + 1);
+  }
+
+  return normalized;
+}
 
 /**
  * Unified logic to identify the current authenticated client.
@@ -187,17 +236,93 @@ export async function createIncident(formData: {
  * Generate a signed URL for a private file in Supabase Storage
  */
 export async function getSignedUrl(path: string, bucket: string = 'payment-proofs') {
-  const supabase = await createServerClientComponent();
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(path, 60); // 1 minute expiry
+  try {
+    if (!path || !path.trim()) {
+      return { data: null, error: 'Ruta de archivo inválida' };
+    }
 
-  if (error) {
-    console.error('Error generating signed URL:', error);
-    return { data: null, error };
+    const normalizedPath = normalizeStoragePath(path, bucket);
+    if (!normalizedPath) {
+      return { data: null, error: 'No se pudo interpretar la ruta del archivo' };
+    }
+
+    const supabase = await createServerClientComponent();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (authError || !user) {
+      return { data: null, error: 'Sesión inválida' };
+    }
+
+    const roleClient = supabaseAdmin || supabase;
+    const { data: profile } = await roleClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    const isAdmin = profile?.role === 'admin';
+
+    // Payment proofs are normally stored as: {user_id}/{subscription_id}/{filename}
+    // but we also support legacy paths by verifying ownership against the client's payments.
+    if (bucket === 'payment-proofs' && !isAdmin) {
+      const userPrefix = `${user.id}/`;
+      let canAccess = normalizedPath.startsWith(userPrefix);
+
+      if (!canAccess) {
+        const { data: client } = await roleClient
+          .from('clients')
+          .select('id')
+          .eq('owner_profile_id', user.id)
+          .maybeSingle();
+
+        if (client?.id) {
+          const { data: payments } = await roleClient
+            .from('payments')
+            .select('proof_file_url, proof_file_path')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+          const requestedVariants = new Set<string>([path.trim(), normalizedPath]);
+          for (const payment of payments || []) {
+            const rawUrl = payment.proof_file_url?.trim();
+            const rawPath = payment.proof_file_path?.trim();
+            const normalizedUrl = rawUrl ? normalizeStoragePath(rawUrl, bucket) : '';
+            const normalizedDbPath = rawPath ? normalizeStoragePath(rawPath, bucket) : '';
+
+            if (
+              (rawUrl && requestedVariants.has(rawUrl)) ||
+              (rawPath && requestedVariants.has(rawPath)) ||
+              (normalizedUrl && requestedVariants.has(normalizedUrl)) ||
+              (normalizedDbPath && requestedVariants.has(normalizedDbPath))
+            ) {
+              canAccess = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!canAccess) {
+        return { data: null, error: 'Acceso denegado al archivo solicitado' };
+      }
+    }
+
+    const signer = supabaseAdmin || supabase;
+    const { data, error } = await signer.storage
+      .from(bucket)
+      .createSignedUrl(normalizedPath, 60); // 1 minute expiry
+
+    if (error) {
+      console.error('Error generating signed URL:', error);
+      return { data: null, error: serializeErrorMessage(error, 'No se pudo generar el enlace seguro') };
+    }
+
+    return { data: data.signedUrl, error: null };
+  } catch (err: unknown) {
+    console.error('Unexpected error generating signed URL:', err);
+    return { data: null, error: serializeErrorMessage(err, 'No se pudo generar el enlace seguro') };
   }
-
-  return { data: data.signedUrl, error: null };
 }
 
 /**
@@ -205,12 +330,28 @@ export async function getSignedUrl(path: string, bucket: string = 'payment-proof
  * This should be used for all report downloads.
  */
 export async function getSecureReportUrl(reportId: string) {
-  // 1. Get client context
-  const { clientId } = await getAuthenticatedClientContext();
+  const supabase = await createServerClientComponent();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { data: null, error: "Sesión inválida" };
+  }
+
+  // Use service role to verify ownership and create signed URL
+  if (!supabaseAdmin) {
+    return { data: null, error: "Servidor no configurado" };
+  }
+
+  // 1. Determine role
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const isAdmin = profile?.role === 'admin';
   
-  // 2. Use admin to bypass RLS and verify report ownership
-  if (!supabaseAdmin) throw new Error("Servidor no configurado");
-  
+  // 2. Load report metadata
   const { data: report, error: reportError } = await supabaseAdmin
     .from('service_reports')
     .select('file_path, client_id')
@@ -219,27 +360,36 @@ export async function getSecureReportUrl(reportId: string) {
     
   if (reportError || !report) {
     console.error(`Secure Report Error: Report ${reportId} not found or inaccessible.`);
-    return { data: null, error: new Error("Reporte no encontrado") };
+    return { data: null, error: "Reporte no encontrado" };
   }
   
-  // 3. Verify match
-  if (report.client_id !== clientId) {
-    console.error(`Secure Report Violation: Client ${clientId} attempted to access Report ${reportId} (owned by ${report.client_id})`);
-    return { data: null, error: new Error("Acceso denegado") };
+  // 3. Ownership check only for non-admin users
+  if (!isAdmin) {
+    const { data: client } = await supabaseAdmin
+      .from('clients')
+      .select('id')
+      .eq('owner_profile_id', user.id)
+      .maybeSingle();
+
+    const requesterClientId = client?.id;
+    if (!requesterClientId || report.client_id !== requesterClientId) {
+      console.error(`Secure Report Violation: User ${user.id} attempted to access Report ${reportId} (owned by ${report.client_id})`);
+      return { data: null, error: "Acceso denegado" };
+    }
   }
   
   if (!report.file_path) {
-    return { data: null, error: new Error("El reporte no tiene un archivo asociado") };
+    return { data: null, error: "El reporte no tiene un archivo asociado" };
   }
   
-  // 4. Generate signed URL as admin to ensure success
+  // 4. Generate signed URL
   const { data: signedData, error: signedError } = await supabaseAdmin.storage
     .from('service-reports')
     .createSignedUrl(report.file_path, 300); // 5 minutes
     
   if (signedError) {
     console.error(`Storage Error: ${signedError.message}`);
-    return { data: null, error: signedError };
+    return { data: null, error: serializeErrorMessage(signedError, 'No se pudo generar el enlace del reporte') };
   }
   
   return { data: signedData.signedUrl, error: null };
@@ -291,6 +441,7 @@ export async function getClientDashboardData(clientId: string) {
     .from('incidents')
     .select('*', { count: 'exact', head: true })
     .eq('client_id', clientId)
+    .neq('title', 'Solicitud de visita técnica')
     .in('status', ['open', 'in_progress']);
 
   // 3. Last technical report
@@ -368,50 +519,45 @@ export async function getClientIncidents(clientId: string) {
 }
 
 /**
- * Get pending visit requests (stored in incidents table with specific title)
+ * Get visit requests for a client
  */
-export async function getPendingVisitRequests(clientId: string) {
+export async function getClientVisitRequests(clientId: string, status: 'pending' | 'scheduled' | 'rejected' | 'all' = 'pending') {
   const db = supabaseAdmin || await createServerClientComponent();
-  const { data, error } = await db
-    .from('incidents')
+  let query = db
+    .from('visit_requests')
     .select('*')
     .eq('client_id', clientId)
-    .eq('title', 'Solicitud de visita técnica')
-    .eq('status', 'open')
-    .order('reported_at', { ascending: false });
+    .order('requested_at', { ascending: false });
+
+  if (status !== 'all') {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
-    console.error(`Error fetching pending visit requests: ${error.message}`);
+    console.error(`Error fetching client visit requests: ${error.message}`);
     return { data: null, error };
   }
 
-  return { data, error: null };
+  return { data: (data || []) as VisitRequest[], error: null };
 }
 
 /**
- * Request a technical visit (standalone action)
+ * Request a technical visit from the authenticated client context
  */
-export async function requestVisit(formData: {
-  clientId: string;
-  subscriptionId?: string;
+export async function requestVisitAction(formData: {
   description: string;
   priority: IncidentPriority;
+  subscriptionId?: string;
 }) {
   const supabase = await createServerClientComponent();
-  const { data, error } = await supabase
-    .from('incidents')
-    .insert({
-      client_id: formData.clientId,
-      subscription_id: formData.subscriptionId,
-      title: 'Solicitud de visita técnica',
-      description: formData.description,
-      priority: formData.priority,
-      status: 'open',
-      channel: 'dashboard',
-      reported_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('create_visit_request', {
+    p_description: formData.description,
+    p_priority: formData.priority,
+    p_subscription_id: formData.subscriptionId || null,
+    p_title: 'Solicitud de visita técnica',
+  });
 
   if (error) {
     console.error('Error requesting visit:', error);
@@ -419,7 +565,26 @@ export async function requestVisit(formData: {
   }
 
   revalidatePath('/dashboard/visits');
+  revalidatePath('/dashboard');
   return { data, error: null };
+}
+
+/**
+ * Backward-compatible wrapper while UI references are fully migrated
+ */
+export async function requestVisit(formData: {
+  description: string;
+  priority: IncidentPriority;
+  subscriptionId?: string;
+}) {
+  return requestVisitAction(formData);
+}
+
+/**
+ * Backward-compatible wrapper while call sites are migrated
+ */
+export async function getPendingVisitRequests(clientId: string) {
+  return getClientVisitRequests(clientId, 'pending');
 }
 
 /**

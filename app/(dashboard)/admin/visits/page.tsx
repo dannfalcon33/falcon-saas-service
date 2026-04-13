@@ -1,8 +1,30 @@
 import React from 'react';
 import { createServerClientComponent } from '@/lib/supabase-server';
-import { getVisits } from '@/lib/actions/admin.actions';
+import { getVisitRequests, getVisits } from '@/lib/actions/admin.actions';
 import { VisitTable } from '@/components/admin/VisitTable';
 import { redirect } from 'next/navigation';
+import { VisitStatus } from '@/lib/types';
+
+interface AdminVisitRow {
+  id: string;
+  title: string;
+  status: VisitStatus;
+  scheduled_start: string;
+  scheduled_end?: string;
+  visit_type: string;
+  client: { business_name: string };
+  technician?: { full_name: string };
+}
+
+interface AdminVisitRequestRow {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+  status: 'pending' | 'scheduled' | 'rejected';
+  requested_at: string;
+  client?: { business_name: string };
+}
 
 export default async function AdminVisitsPage() {
   const supabase = await createServerClientComponent();
@@ -10,10 +32,16 @@ export default async function AdminVisitsPage() {
 
   if (!user) redirect('/login');
 
-  const { data: visits, error } = await getVisits();
+  const [
+    { data: visits, error: visitsError },
+    { data: visitRequests, error: requestsError }
+  ] = await Promise.all([
+    getVisits(),
+    getVisitRequests('pending')
+  ]);
 
-  if (error) {
-    console.error('Error loading visits:', error);
+  if (visitsError || requestsError) {
+    console.error('Error loading visits module:', visitsError || requestsError);
     return <div>Error al cargar visitas.</div>;
   }
 
@@ -31,7 +59,10 @@ export default async function AdminVisitsPage() {
         </div>
       </div>
 
-      <VisitTable initialVisits={visits as any || []} />
+      <VisitTable
+        initialVisits={(visits || []) as AdminVisitRow[]}
+        initialRequests={(visitRequests || []) as AdminVisitRequestRow[]}
+      />
     </div>
   );
 }

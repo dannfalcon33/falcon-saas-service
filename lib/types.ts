@@ -7,6 +7,7 @@ export type PaymentMethod = 'binance' | 'zinli' | 'pago_movil' | 'transferencia'
 export type PaymentStatus = 'pending' | 'submitted' | 'verified' | 'rejected';
 export type VisitType = 'included' | 'extra' | 'emergency';
 export type VisitStatus = 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'missed';
+export type VisitRequestStatus = 'pending' | 'scheduled' | 'rejected';
 export type IncidentPriority = 'low' | 'medium' | 'high' | 'critical';
 export type IncidentStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type IncidentChannel = 'dashboard' | 'phone' | 'whatsapp' | 'email' | 'onsite';
@@ -147,6 +148,24 @@ export interface Visit {
   updated_at: string;
 }
 
+export interface VisitRequest {
+  id: string;
+  client_id: string;
+  subscription_id?: string;
+  requested_by?: string;
+  priority: IncidentPriority;
+  title: string;
+  description: string;
+  requested_at: string;
+  status: VisitRequestStatus;
+  admin_notes?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  linked_visit_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Incident {
   id: string;
   client_id: string;
@@ -199,7 +218,7 @@ export interface NavLink {
 }
 
 export interface Feature {
-  icon: any;
+  icon: unknown;
   title: string;
   description: string;
 }
@@ -221,7 +240,7 @@ export interface FAQ {
 }
 
 export interface UseCase {
-  icon: any;
+  icon: unknown;
   title: string;
   description: string;
 }

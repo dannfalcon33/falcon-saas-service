@@ -23,6 +23,7 @@ interface Payment {
   status: string;
   submitted_at: string;
   proof_file_url?: string;
+  proof_file_path?: string;
   admin_notes?: string;
   clients?: {
     business_name: string;
@@ -36,6 +37,15 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
   const [filter, setFilter] = useState('all');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--/--/----';
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   const filteredPayments = filter === 'all' 
     ? payments 
     : payments.filter(p => p.status === filter);
@@ -43,7 +53,7 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
   const handleViewProof = async (path: string) => {
     const { data: url, error } = await getSignedUrl(path);
     if (error) {
-      alert("Error al generar enlace.");
+      alert(`Error al generar enlace: ${error}`);
       return;
     }
     if (url) window.open(url, '_blank');
@@ -122,16 +132,16 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
                   <span className="text-sm font-black text-white">${payment.amount_usd}</span>
                 </td>
                 <td className="px-8 py-6 text-sm">
-                  {new Date(payment.submitted_at).toLocaleDateString()}
+                  {formatDate(payment.submitted_at)}
                 </td>
                 <td className="px-8 py-6">
                   <StatusBadge status={payment.status} />
                 </td>
                 <td className="px-8 py-6">
                    <div className="flex items-center gap-3">
-                      {payment.proof_file_url && (
+                      {(payment.proof_file_path || payment.proof_file_url) && (
                         <button 
-                          onClick={() => handleViewProof(payment.proof_file_url!)}
+                          onClick={() => handleViewProof(payment.proof_file_path || payment.proof_file_url!)}
                           className="p-2 bg-white/5 border border-white/5 rounded-lg text-white/40 hover:text-[#3D7BFF] hover:border-[#3D7BFF]/30 transition-all group/btn"
                           title="Ver Comprobante"
                         >

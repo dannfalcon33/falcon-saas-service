@@ -36,6 +36,7 @@ interface IncidentTableProps {
 
 export const IncidentTable = ({ incidents, isAdmin, onManage }: IncidentTableProps) => {
   const [filter, setFilter] = useState('all');
+  const showAdminActions = Boolean(isAdmin && onManage);
 
   const filteredIncidents = filter === 'all' 
     ? incidents 
@@ -82,7 +83,9 @@ export const IncidentTable = ({ incidents, isAdmin, onManage }: IncidentTablePro
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Fecha Reporte</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Responsable</th>
               <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Estado</th>
-              <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Acción</th>
+              {showAdminActions && (
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Acción</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -118,19 +121,21 @@ export const IncidentTable = ({ incidents, isAdmin, onManage }: IncidentTablePro
                   <td className="px-8 py-6">
                     <StatusBadge status={incident.status} />
                   </td>
-                  <td className="px-8 py-6 text-right">
-                    <button 
-                      onClick={() => onManage && onManage(incident)}
-                      className="p-3 bg-white/5 border border-white/5 rounded-2xl text-[#8A9199] hover:text-[#3D7BFF] hover:border-[#3D7BFF]/30 transition-all group/btn"
-                    >
-                      {isAdmin ? <MessageSquare className="w-4 h-4 group-hover/btn:scale-110 transition-transform" /> : <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />}
-                    </button>
-                  </td>
+                  {showAdminActions && (
+                    <td className="px-8 py-6 text-right">
+                      <button 
+                        onClick={() => onManage && onManage(incident)}
+                        className="p-3 bg-white/5 border border-white/5 rounded-2xl text-[#8A9199] hover:text-[#3D7BFF] hover:border-[#3D7BFF]/30 transition-all group/btn"
+                      >
+                        <MessageSquare className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             }) : (
               <tr>
-                <td colSpan={5} className="px-8 py-20 text-center">
+                <td colSpan={showAdminActions ? 5 : 4} className="px-8 py-20 text-center">
                   <p className="text-xs font-serif italic tracking-widest text-[#8A9199]/40 uppercase">No hay registros de incidencias</p>
                 </td>
               </tr>

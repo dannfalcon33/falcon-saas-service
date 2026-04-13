@@ -5,10 +5,8 @@ import {
   X, 
   Upload, 
   Loader2, 
-  FileText, 
   Building2, 
   Calendar, 
-  AlertTriangle,
   FileSearch,
   CheckCircle2
 } from 'lucide-react';
@@ -21,13 +19,23 @@ interface ReportUploadModalProps {
   onClose: () => void;
 }
 
+interface ClientOption {
+  id: string;
+  business_name: string;
+}
+
+interface VisitOption {
+  id: string;
+  title: string;
+  scheduled_start: string;
+}
+
 export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) => {
   const router = useRouter();
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
-  const [clients, setClients] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [incidents, setIncidents] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [visits, setVisits] = useState<VisitOption[]>([]);
   
   const [formData, setFormData] = useState({
     clientId: '',
@@ -58,8 +66,9 @@ export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) =
           .from('incidents')
           .select('id, title')
           .eq('client_id', formData.clientId)
+          .neq('title', 'Solicitud de visita técnica')
           .order('reported_at', { ascending: false });
-         if (incidentData) setIncidents(incidentData);
+         void incidentData;
       }
     };
     if (isOpen) fetchData();
@@ -100,8 +109,9 @@ export const ReportUploadModal = ({ isOpen, onClose }: ReportUploadModalProps) =
 
       onClose();
       router.refresh();
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error inesperado';
+      alert("Error: " + message);
     } finally {
       setIsLoading(false);
     }

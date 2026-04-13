@@ -34,7 +34,7 @@ export const Sidebar = ({ role, isCollapsed = false, onCloseMobile }: SidebarPro
     { name: 'Mis Visitas', href: '/dashboard/visits', icon: Calendar },
     { name: 'Mis Pagos', href: '/dashboard/payments', icon: CreditCard },
     { name: 'Incidencias', href: '/dashboard/incidents', icon: AlertTriangle },
-    { name: 'Reportes Técnicos', href: '/dashboard/reports', icon: FileText },
+    { name: 'Reportes de Servicios', href: '/dashboard/reports', icon: FileText },
   ];
 
   const adminLinks = [
@@ -45,7 +45,7 @@ export const Sidebar = ({ role, isCollapsed = false, onCloseMobile }: SidebarPro
     { name: 'Agenda Visitas', href: '/admin/visits', icon: Calendar },
     { name: 'Validar Pagos', href: '/admin/payments', icon: CreditCard },
     { name: 'Tickets Soporte', href: '/admin/incidents', icon: AlertTriangle },
-    { name: 'Reportes Técnicos', href: '/admin/reports', icon: FileText },
+    { name: 'Reportes de Servicios', href: '/admin/reports', icon: FileText },
   ];
 
   const links = role === 'admin' ? adminLinks : clientLinks;

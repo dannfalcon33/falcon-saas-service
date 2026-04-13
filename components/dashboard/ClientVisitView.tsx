@@ -7,11 +7,9 @@ import {
   MapPin, 
   User as UserIcon,
   ShieldCheck,
-  ChevronRight,
   Info
 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard/Common';
-import { Visit } from '@/lib/types';
 
 interface ClientVisitViewProps {
   visits: any[];
@@ -20,6 +18,23 @@ interface ClientVisitViewProps {
 export const ClientVisitView = ({ visits }: ClientVisitViewProps) => {
   const upcomingVisits = visits.filter(v => v.status === 'scheduled');
   const pastVisits = visits.filter(v => v.status !== 'scheduled');
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--/--/----';
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--:-- UTC';
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${hours}:${minutes} UTC`;
+  };
 
   return (
     <div className="space-y-12">
@@ -56,7 +71,7 @@ export const ClientVisitView = ({ visits }: ClientVisitViewProps) => {
                       <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Fecha y Hora</p>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-[#3D7BFF]" />
-                        {new Date(visit.scheduled_start).toLocaleDateString()} - {new Date(visit.scheduled_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatDate(visit.scheduled_start)} - {formatTime(visit.scheduled_start)}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -93,12 +108,11 @@ export const ClientVisitView = ({ visits }: ClientVisitViewProps) => {
                   <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Servicio</th>
                   <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Fecha</th>
                   <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Estado</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Detalle</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {pastVisits.map((visit) => (
-                  <tr key={visit.id} className="group hover:bg-white/[0.01] transition-colors cursor-pointer">
+                  <tr key={visit.id} className="group hover:bg-white/[0.01] transition-colors">
                     <td className="px-8 py-6">
                       <div>
                         <p className="text-sm font-bold text-white tracking-tight">{visit.title}</p>
@@ -106,19 +120,16 @@ export const ClientVisitView = ({ visits }: ClientVisitViewProps) => {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                       <span className="text-xs font-bold text-white/60">{new Date(visit.scheduled_start).toLocaleDateString()}</span>
+                       <span className="text-xs font-bold text-white/60">{formatDate(visit.scheduled_start)}</span>
                     </td>
                     <td className="px-8 py-6">
                        <StatusBadge status={visit.status} />
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                       <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white group-hover:translate-x-1 transition-all inline-block" />
                     </td>
                   </tr>
                 ))}
                 {pastVisits.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-8 py-10 text-center opacity-30 text-xs font-serif italic tracking-widest uppercase">Historial vacío</td>
+                    <td colSpan={3} className="px-8 py-10 text-center opacity-30 text-xs font-serif italic tracking-widest uppercase">Historial vacío</td>
                   </tr>
                 )}
               </tbody>

@@ -3,21 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { IncidentForm } from '@/components/dashboard/IncidentForm';
 import { IncidentTable } from '@/components/dashboard/IncidentTable';
-import { getClientIncidents, getAuthenticatedClientContext, getClientDashboardData, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
-import { createClient } from '@/lib/supabase';
-import { Plus, X, ListFilter, Activity } from 'lucide-react';
+import { getClientIncidents, getAuthenticatedClientContext, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
+import { Plus, Activity } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
+import { Incident, Subscription } from '@/lib/types';
+
+interface IncidentWithInfo extends Incident {
+  technician?: { full_name: string };
+}
 
 export default function ClientIncidentsPage() {
-  const supabase = createClient();
-  const [incidents, setIncidents] = useState<any[]>([]);
+  const [incidents, setIncidents] = useState<IncidentWithInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const fetchIncidents = async (cid: string) => {
     const { data } = await getClientIncidents(cid);
-    if (data) setIncidents(data);
+    if (data) setIncidents(data as IncidentWithInfo[]);
   };
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export default function ClientIncidentsPage() {
           getCurrentSubscription(clientId)
         ]);
 
-        if (incidentsRes.data) setIncidents(incidentsRes.data);
+        if (incidentsRes.data) setIncidents(incidentsRes.data as IncidentWithInfo[]);
         if (subRes.data) setSubscription(subRes.data);
         
         setIsLoading(false);

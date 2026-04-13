@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
+import {
   Calendar, 
   Send, 
   Loader2, 
@@ -11,16 +11,16 @@ import {
   ShieldCheck,
   Zap,
   ShieldAlert,
-  AlertTriangle
+  AlertTriangle,
+  type LucideIcon
 } from 'lucide-react';
-import { requestVisit } from '@/lib/actions/dashboard.actions';
+import { requestVisitAction } from '@/lib/actions/dashboard.actions';
 import { IncidentPriority } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 interface VisitRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  clientId: string;
   subscriptionId?: string;
   visitStats?: {
     visit_used_count: number;
@@ -33,7 +33,6 @@ interface VisitRequestModalProps {
 export const VisitRequestModal = ({ 
   isOpen, 
   onClose, 
-  clientId, 
   subscriptionId, 
   visitStats 
 }: VisitRequestModalProps) => {
@@ -54,8 +53,7 @@ export const VisitRequestModal = ({
     setIsLoading(true);
 
     try {
-      const { error } = await requestVisit({
-        clientId,
+      const { error } = await requestVisitAction({
         subscriptionId,
         description: formData.description,
         priority: formData.priority
@@ -66,8 +64,9 @@ export const VisitRequestModal = ({
       setFormData({ description: '', priority: 'medium' });
       router.refresh();
       onClose();
-    } catch (err: any) {
-      alert("Error al solicitar visita: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error inesperado';
+      alert("Error al solicitar visita: " + message);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +74,7 @@ export const VisitRequestModal = ({
 
   if (!isOpen) return null;
 
-  const priorities: { value: IncidentPriority; label: string; icon: any; color: string; desc: string }[] = [
+  const priorities: { value: IncidentPriority; label: string; icon: LucideIcon; color: string; desc: string }[] = [
     { value: 'low', label: 'Mantenimiento', icon: Info, color: 'text-blue-400', desc: 'Revisiones rutinarias o ajustes.' },
     { value: 'medium', label: 'Soporte Estándar', icon: Clock, color: 'text-amber-400', desc: 'Atención técnica regular.' },
     { value: 'high', label: 'Urgencia Técnica', icon: Zap, color: 'text-orange-500', desc: 'Requerido para corregir fallas operativas.' },

@@ -1,19 +1,25 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MousePointer2, Calendar } from 'lucide-react';
+import { MousePointer2 } from 'lucide-react';
 import { VisitRequestModal } from './VisitRequestModal';
 import { PendingVisitsList } from './PendingVisitsList';
+import { VisitRequest } from '@/lib/types';
+
+interface VisitStats {
+  visit_used_count: number;
+  visit_available_count: number;
+  visit_limit_snapshot: number;
+  is_unlimited_snapshot: boolean;
+}
 
 interface VisitManagementSectionProps {
-  clientId: string;
   subscriptionId?: string;
-  visitStats?: any;
-  pendingRequests: any[];
+  visitStats?: VisitStats | null;
+  pendingRequests: VisitRequest[];
 }
 
 export const VisitManagementSection = ({ 
-  clientId, 
   subscriptionId, 
   visitStats, 
   pendingRequests 
@@ -51,9 +57,8 @@ export const VisitManagementSection = ({
       <VisitRequestModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        clientId={clientId}
         subscriptionId={subscriptionId}
-        visitStats={visitStats}
+        visitStats={visitStats || undefined}
       />
     </div>
   );

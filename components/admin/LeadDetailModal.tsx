@@ -87,7 +87,11 @@ export const LeadDetailModal = ({ isOpen, onClose, lead, adminId }: LeadDetailMo
 
   const handleViewProof = async () => {
     if (!lead.proof_file_path) return;
-    const { data } = await getSignedUrl(lead.proof_file_path, 'payment-proofs');
+    const { data, error } = await getSignedUrl(lead.proof_file_path, 'payment-proofs');
+    if (error) {
+      setError(error);
+      return;
+    }
     if (data) window.open(data, '_blank');
   };
 

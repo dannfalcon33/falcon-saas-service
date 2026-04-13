@@ -38,10 +38,14 @@ export const ServiceReportTable = ({ reports, isAdmin }: ServiceReportTableProps
   const handleDownload = async (id: string) => {
     try {
       const { data, error } = await getSecureReportUrl(id);
-      if (error) throw error;
+      if (error) {
+        alert(`Error al acceder al archivo: ${error}`);
+        return;
+      }
       if (data) window.open(data, '_blank');
-    } catch (err: any) {
-      alert("Error al acceder al archivo: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error inesperado';
+      alert("Error al acceder al archivo: " + message);
     }
   };
 

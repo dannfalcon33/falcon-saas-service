@@ -3,7 +3,7 @@ import {
   getAuthenticatedClientContext, 
   getClientVisits, 
   getClientDashboardData,
-  getPendingVisitRequests 
+  getClientVisitRequests 
 } from '@/lib/actions/dashboard.actions';
 import { ClientVisitView } from '@/components/dashboard/ClientVisitView';
 import { VisitManagementSection } from '@/components/dashboard/VisitManagementSection';
@@ -18,7 +18,7 @@ export default async function ClientVisitsPage() {
   ] = await Promise.all([
     getClientVisits(clientId),
     getClientDashboardData(clientId),
-    getPendingVisitRequests(clientId)
+    getClientVisitRequests(clientId, 'pending')
   ]);
 
   return (
@@ -35,9 +35,8 @@ export default async function ClientVisitsPage() {
 
       {/* Interactive Management Section */}
       <VisitManagementSection 
-        clientId={clientId}
         subscriptionId={subscriptionId}
-        visitStats={dashboardData?.subscriptionStats}
+        visitStats={dashboardData?.subscriptionStats || undefined}
         pendingRequests={pendingRequests || []}
       />
 

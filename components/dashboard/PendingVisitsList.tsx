@@ -3,13 +3,10 @@
 import React from 'react';
 import { 
   Hourglass, 
-  MapPin, 
-  Calendar,
   AlertCircle,
   Clock,
   ChevronRight
 } from 'lucide-react';
-import { StatusBadge } from './Common';
 
 interface PendingVisit {
   id: string;
@@ -17,7 +14,7 @@ interface PendingVisit {
   description: string;
   priority: string;
   status: string;
-  reported_at: string;
+  requested_at: string;
 }
 
 interface PendingVisitsListProps {
@@ -52,10 +49,12 @@ export const PendingVisitsList = ({ requests }: PendingVisitsListProps) => {
                 <div className="space-y-1">
                    <div className="flex items-center gap-3">
                       <p className="text-white font-bold tracking-tight">Solicitud de Visita Técnica</p>
-                      <span className="px-2 py-0.5 bg-white/5 rounded text-[8px] font-black text-white/30 uppercase tracking-widest border border-white/5">Pendiente</span>
+                      <span className="px-2 py-0.5 bg-white/5 rounded text-[8px] font-black text-white/30 uppercase tracking-widest border border-white/5">
+                        {request.status}
+                      </span>
                    </div>
                    <p className="text-xs text-[#8A9199] line-clamp-2 italic leading-relaxed">
-                     "{request.description}"
+                     &quot;{request.description}&quot;
                    </p>
                 </div>
               </div>
@@ -70,7 +69,7 @@ export const PendingVisitsList = ({ requests }: PendingVisitsListProps) => {
                  </div>
                  <div className="flex flex-col gap-1">
                     <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Enviada</p>
-                    <p className="text-xs font-bold text-white">{new Date(request.reported_at).toLocaleDateString()}</p>
+                    <p className="text-xs font-bold text-white">{new Date(request.requested_at).toLocaleDateString()}</p>
                  </div>
                  <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-[#8A9199] group-hover:text-white transition-colors">
                     <ChevronRight className="w-5 h-5" />

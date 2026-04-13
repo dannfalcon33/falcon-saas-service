@@ -2,8 +2,9 @@ import React from 'react';
 import { getAuthenticatedClientContext, getPaymentHistory, getCurrentSubscription } from '@/lib/actions/dashboard.actions';
 import { UploadProofForm } from '@/components/dashboard/UploadProofForm';
 import { PaymentHistoryTable } from '@/components/dashboard/PaymentHistoryTable';
-import { CreditCard, ShieldCheck, Info } from 'lucide-react';
+import { ShieldCheck, Info } from 'lucide-react';
 import { createServerClientComponent } from '@/lib/supabase-server';
+import { Payment } from '@/lib/types';
 
 export default async function ClientPaymentsPage() {
   const { clientId } = await getAuthenticatedClientContext();
@@ -65,7 +66,7 @@ export default async function ClientPaymentsPage() {
 
         {/* History Table (2/3) */}
         <div className="lg:col-span-2 space-y-6">
-          <PaymentHistoryTable payments={payments as any || []} />
+          <PaymentHistoryTable payments={(payments || []) as Payment[]} />
           
           <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl flex items-center gap-4 group hover:bg-white/[0.04] transition-all">
             <div className="w-12 h-12 rounded-2xl bg-black/40 flex items-center justify-center text-[#3D7BFF] border border-white/5 group-hover:scale-105 transition-transform">

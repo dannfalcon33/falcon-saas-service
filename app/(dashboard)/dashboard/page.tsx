@@ -80,8 +80,8 @@ export default async function ClientDashboardPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/incidents?type=visit_request" className="px-6 py-3 bg-[#3D7BFF] rounded-2xl text-xs font-bold uppercase tracking-widest text-white hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-[#3D7BFF]/20">
-            Solicitar Soporte <ArrowRight className="w-4 h-4" />
+          <Link href="/dashboard/visits" className="px-6 py-3 bg-[#3D7BFF] rounded-2xl text-xs font-bold uppercase tracking-widest text-white hover:bg-opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-[#3D7BFF]/20">
+            Solicitar Visita <ArrowRight className="w-4 h-4" />
           </Link>
           <Link href="/dashboard/payments" className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest text-white hover:bg-white/10 transition-all flex items-center gap-2">
             Pagos
@@ -238,7 +238,7 @@ export default async function ClientDashboardPage() {
   );
 }
 
-function ChevronRight(props: any) {
+function ChevronRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg 
       {...props} 

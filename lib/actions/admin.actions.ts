@@ -1,7 +1,7 @@
 'use server';
 
 import { createServerClientComponent, supabaseAdmin } from '@/lib/supabase-server';
-import { Client, Payment, ClientStatus, Subscription, Visit } from '@/lib/types';
+import { Client, Payment, ClientStatus, Subscription, Visit, VisitRequest, VisitType } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -253,9 +253,9 @@ export async function enableClientAccess(clientId: string) {
     revalidatePath('/admin/clients');
     return { success: true, userId: user.id };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Enable Access Error:", error);
-    return { error: error.message };
+    return { error: error instanceof Error ? error.message : 'Error desconocido' };
   }
 }
 
@@ -291,6 +291,86 @@ export async function getVisits() {
     `)
     .order('scheduled_start', { ascending: false });
   
+  return { data, error };
+}
+
+export async function getVisitRequests(status: 'pending' | 'scheduled' | 'rejected' | 'all' = 'pending') {
+  const supabase = await createServerClientComponent();
+  let query = supabase
+    .from('visit_requests')
+    .select(`
+      *,
+      client:client_id (business_name),
+      requested_by_profile:requested_by (full_name),
+      reviewed_by_profile:reviewed_by (full_name)
+    `)
+    .order('requested_at', { ascending: false });
+
+  if (status !== 'all') {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+  return { data: (data || []) as VisitRequest[], error };
+}
+
+export async function scheduleVisitRequestAction(params: {
+  requestId: string;
+  assignedTo?: string;
+  scheduledStart: string;
+  scheduledEnd?: string;
+  visitType: VisitType;
+  title?: string;
+  description?: string;
+  adminNotes?: string;
+}) {
+  const supabase = await createServerClientComponent();
+  const { data: authData } = await supabase.auth.getUser();
+
+  if (!authData.user) {
+    return { data: null, error: new Error('Sesión inválida') };
+  }
+
+  const { data, error } = await supabase.rpc('schedule_visit_from_request', {
+    p_request_id: params.requestId,
+    p_admin_profile_id: authData.user.id,
+    p_assigned_to: params.assignedTo || null,
+    p_scheduled_start: params.scheduledStart,
+    p_scheduled_end: params.scheduledEnd || null,
+    p_visit_type: params.visitType,
+    p_title: params.title || null,
+    p_description: params.description || null,
+    p_admin_notes: params.adminNotes || null,
+  });
+
+  if (!error) {
+    revalidatePath('/admin/visits');
+    revalidatePath('/dashboard/visits');
+    revalidatePath('/dashboard');
+  }
+
+  return { data, error };
+}
+
+export async function rejectVisitRequestAction(params: { requestId: string; adminNotes?: string }) {
+  const supabase = await createServerClientComponent();
+  const { data: authData } = await supabase.auth.getUser();
+
+  if (!authData.user) {
+    return { data: null, error: new Error('Sesión inválida') };
+  }
+
+  const { data, error } = await supabase.rpc('reject_visit_request', {
+    p_request_id: params.requestId,
+    p_admin_profile_id: authData.user.id,
+    p_admin_notes: params.adminNotes || null,
+  });
+
+  if (!error) {
+    revalidatePath('/admin/visits');
+    revalidatePath('/dashboard/visits');
+  }
+
   return { data, error };
 }
 
@@ -342,15 +422,32 @@ export async function createVisit(visitData: Partial<Visit>) {
 
 export async function updateVisit(id: string, visitData: Partial<Visit>) {
   const supabase = await createServerClientComponent();
+  const { data: authData } = await supabase.auth.getUser();
+
+  if (!authData.user) {
+    return { data: null, error: 'Sesión inválida' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authData.user.id)
+    .maybeSingle();
+
+  if (profile?.role !== 'admin') {
+    return { data: null, error: 'No autorizado para actualizar visitas' };
+  }
+
+  const db = supabaseAdmin || supabase;
   
   // 1. Get current state to check for type changes
-  const { data: oldVisit } = await supabase
+  const { data: oldVisit } = await db
     .from('visits')
     .select('*')
     .eq('id', id)
     .single();
 
-  const { data: visit, error } = await supabase
+  const { data: visit, error } = await db
     .from('visits')
     .update(visitData)
     .eq('id', id)
@@ -363,7 +460,7 @@ export async function updateVisit(id: string, visitData: Partial<Visit>) {
   if (oldVisit && oldVisit.visit_type !== visit.visit_type) {
     const subId = visit.subscription_id;
     if (subId) {
-      const { data: sub } = await supabase.from('subscriptions').select('*').eq('id', subId).single();
+      const { data: sub } = await db.from('subscriptions').select('*').eq('id', subId).single();
       if (sub) {
         let newUsed = sub.visit_used_count;
         let newAvail = sub.visit_available_count;
@@ -379,7 +476,7 @@ export async function updateVisit(id: string, visitData: Partial<Visit>) {
           newAvail++;
         }
 
-        await supabase.from('subscriptions').update({
+        await db.from('subscriptions').update({
           visit_used_count: newUsed,
           visit_available_count: newAvail,
           updated_at: new Date().toISOString()
@@ -438,12 +535,13 @@ export async function getIncidents() {
       reporter:reported_by (full_name),
       technician:assigned_to (full_name)
     `)
+    .neq('title', 'Solicitud de visita técnica')
     .order('reported_at', { ascending: false });
   
   return { data, error };
 }
 
-export async function updateIncident(id: string, incidentData: any) {
+export async function updateIncident(id: string, incidentData: Record<string, unknown>) {
   const supabase = await createServerClientComponent();
   const { data, error } = await supabase
     .from('incidents')
@@ -483,7 +581,7 @@ export async function getServiceReports(clientId?: string) {
   return { data, error };
 }
 
-export async function createServiceReport(reportData: any) {
+export async function createServiceReport(reportData: Record<string, unknown>) {
   const supabase = await createServerClientComponent();
   const { data, error } = await supabase
     .from('service_reports')
@@ -611,6 +709,7 @@ export async function getAdminStats() {
   const { data: incidentsData } = await supabase
     .from('incidents')
     .select('status, priority')
+    .neq('title', 'Solicitud de visita técnica')
     .in('status', ['open', 'in_progress']);
 
   const openIncidents = incidentsData?.length || 0;
@@ -645,4 +744,3 @@ export async function getAdminStats() {
     error: null
   };
 }
-
