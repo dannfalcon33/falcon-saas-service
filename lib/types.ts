@@ -140,7 +140,7 @@ export interface Visit {
   status: VisitStatus;
   scheduled_start: string;
   scheduled_end?: string;
-  completed_at?: string;
+  completed_at?: string | null;
   title: string;
   description?: string;
   internal_notes?: string;
