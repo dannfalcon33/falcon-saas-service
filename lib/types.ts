@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 // Enums
 export type AppRole = 'admin' | 'client' | 'technician';
 export type LeadStatus = 'new' | 'contacted' | 'negotiation' | 'won' | 'lost';
@@ -218,7 +220,7 @@ export interface NavLink {
 }
 
 export interface Feature {
-  icon: unknown;
+  icon: LucideIcon;
   title: string;
   description: string;
 }
@@ -240,7 +242,7 @@ export interface FAQ {
 }
 
 export interface UseCase {
-  icon: unknown;
+  icon: LucideIcon;
   title: string;
   description: string;
 }
