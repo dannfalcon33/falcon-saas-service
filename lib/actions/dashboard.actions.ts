@@ -182,11 +182,40 @@ export async function submitPaymentProof(formData: {
   proofFileUrl?: string;
 }) {
   const supabase = await createServerClientComponent();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const user = authData?.user;
+
+  if (authError || !user) {
+    return { data: null, error: 'Sesión inválida' };
+  }
+
+  const db = supabaseAdmin || supabase;
+  const { data: ownClient } = await db
+    .from('clients')
+    .select('id')
+    .eq('owner_profile_id', user.id)
+    .maybeSingle();
+
+  if (!ownClient?.id || ownClient.id !== formData.clientId) {
+    return { data: null, error: 'Cliente inválido para esta sesión' };
+  }
+
+  const { data: ownSubscription } = await db
+    .from('subscriptions')
+    .select('id')
+    .eq('id', formData.subscriptionId)
+    .eq('client_id', ownClient.id)
+    .maybeSingle();
+
+  if (!ownSubscription?.id) {
+    return { data: null, error: 'La suscripción indicada no pertenece al cliente autenticado' };
+  }
+
   const { data, error } = await supabase
     .from('payments')
     .insert({
-      client_id: formData.clientId,
-      subscription_id: formData.subscriptionId,
+      client_id: ownClient.id,
+      subscription_id: ownSubscription.id,
       amount_usd: formData.amountUsd,
       payment_method: formData.paymentMethod,
       reference_code: formData.referenceCode,
@@ -217,11 +246,45 @@ export async function createIncident(formData: {
   priority: IncidentPriority;
 }) {
   const supabase = await createServerClientComponent();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const user = authData?.user;
+
+  if (authError || !user) {
+    return { data: null, error: 'Sesión inválida' };
+  }
+
+  const db = supabaseAdmin || supabase;
+  const { data: ownClient } = await db
+    .from('clients')
+    .select('id')
+    .eq('owner_profile_id', user.id)
+    .maybeSingle();
+
+  if (!ownClient?.id || ownClient.id !== formData.clientId) {
+    return { data: null, error: 'Cliente inválido para esta sesión' };
+  }
+
+  let validatedSubscriptionId: string | null = null;
+  if (formData.subscriptionId) {
+    const { data: ownSubscription } = await db
+      .from('subscriptions')
+      .select('id')
+      .eq('id', formData.subscriptionId)
+      .eq('client_id', ownClient.id)
+      .maybeSingle();
+
+    if (!ownSubscription?.id) {
+      return { data: null, error: 'La suscripción indicada no pertenece al cliente autenticado' };
+    }
+
+    validatedSubscriptionId = ownSubscription.id;
+  }
+
   const { data, error } = await supabase
     .from('incidents')
     .insert({
-      client_id: formData.clientId,
-      subscription_id: formData.subscriptionId,
+      client_id: ownClient.id,
+      subscription_id: validatedSubscriptionId,
       title: formData.title,
       description: formData.description,
       priority: formData.priority,
