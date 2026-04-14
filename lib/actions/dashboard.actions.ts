@@ -1,7 +1,16 @@
 'use server';
 
 import { createServerClientComponent, supabaseAdmin } from '@/lib/supabase-server';
-import { Subscription, Payment, Incident, PaymentMethod, IncidentPriority, VisitRequest } from '@/lib/types';
+import {
+  Subscription,
+  Payment,
+  Incident,
+  PaymentMethod,
+  IncidentPriority,
+  VisitRequest,
+  ClientNotification,
+  ClientProfilePanelData,
+} from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -604,6 +613,275 @@ export async function getClientServiceReports(clientId: string) {
   }
 
   return { data, error: null };
+}
+
+/**
+ * Build client-facing notifications from operational events.
+ */
+export async function getClientNotifications(limit: number = 20) {
+  try {
+    const supabase = await createServerClientComponent();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (authError || !user) {
+      return { data: [] as ClientNotification[], unreadCount: 0, error: 'Sesión inválida' };
+    }
+
+    const db = supabaseAdmin || supabase;
+    const { data: client } = await db
+      .from('clients')
+      .select('id')
+      .eq('owner_profile_id', user.id)
+      .maybeSingle();
+
+    if (!client?.id) {
+      return { data: [] as ClientNotification[], unreadCount: 0, error: null };
+    }
+
+    const [paymentsRes, incidentsRes, reportsRes, visitRequestsRes] = await Promise.all([
+      db
+        .from('payments')
+        .select('id, reference_code, verified_at, updated_at')
+        .eq('client_id', client.id)
+        .eq('status', 'verified')
+        .order('verified_at', { ascending: false })
+        .limit(20),
+      db
+        .from('incidents')
+        .select('id, title, resolved_at, updated_at')
+        .eq('client_id', client.id)
+        .neq('title', 'Solicitud de visita técnica')
+        .in('status', ['resolved', 'closed'])
+        .order('resolved_at', { ascending: false })
+        .limit(20),
+      db
+        .from('service_reports')
+        .select('id, title, created_at')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      db
+        .from('visit_requests')
+        .select('id, title, reviewed_at, updated_at')
+        .eq('client_id', client.id)
+        .eq('status', 'scheduled')
+        .order('reviewed_at', { ascending: false })
+        .limit(20),
+    ]);
+
+    const notifications: ClientNotification[] = [];
+
+    for (const payment of paymentsRes.data || []) {
+      const occurredAt = payment.verified_at || payment.updated_at || new Date().toISOString();
+      notifications.push({
+        id: `payment-${payment.id}`,
+        type: 'payment_approved',
+        title: 'Pago aprobado',
+        message: payment.reference_code
+          ? `Tu comprobante ${payment.reference_code} fue validado.`
+          : 'Tu comprobante de pago fue validado.',
+        occurred_at: occurredAt,
+        href: '/dashboard/payments',
+      });
+    }
+
+    for (const incident of incidentsRes.data || []) {
+      const occurredAt = incident.resolved_at || incident.updated_at || new Date().toISOString();
+      notifications.push({
+        id: `incident-${incident.id}`,
+        type: 'incident_resolved',
+        title: 'Incidencia resuelta',
+        message: `Se cerró el ticket: ${incident.title}.`,
+        occurred_at: occurredAt,
+        href: '/dashboard/incidents',
+      });
+    }
+
+    for (const report of reportsRes.data || []) {
+      notifications.push({
+        id: `report-${report.id}`,
+        type: 'report_received',
+        title: 'Reporte recibido',
+        message: `Se publicó el reporte: ${report.title}.`,
+        occurred_at: report.created_at || new Date().toISOString(),
+        href: '/dashboard/reports',
+      });
+    }
+
+    for (const request of visitRequestsRes.data || []) {
+      const occurredAt = request.reviewed_at || request.updated_at || new Date().toISOString();
+      notifications.push({
+        id: `visit-${request.id}`,
+        type: 'visit_approved',
+        title: 'Visita aprobada',
+        message: `Tu solicitud "${request.title || 'Visita técnica'}" fue aprobada.`,
+        occurred_at: occurredAt,
+        href: '/dashboard/visits',
+      });
+    }
+
+    notifications.sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+    const sliced = notifications.slice(0, Math.max(1, limit));
+
+    return { data: sliced, unreadCount: sliced.length, error: null };
+  } catch (err: unknown) {
+    console.error('Error fetching client notifications:', err);
+    return {
+      data: [] as ClientNotification[],
+      unreadCount: 0,
+      error: serializeErrorMessage(err, 'No se pudieron cargar las notificaciones'),
+    };
+  }
+}
+
+export async function getClientProfilePanelData() {
+  try {
+    const supabase = await createServerClientComponent();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (authError || !user) {
+      return { data: null as ClientProfilePanelData | null, error: 'Sesión inválida' };
+    }
+
+    const db = supabaseAdmin || supabase;
+
+    const { data: profile, error: profileError } = await db
+      .from('profiles')
+      .select('id, email, full_name, phone, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return { data: null as ClientProfilePanelData | null, error: 'No se encontró el perfil' };
+    }
+
+    const { data: client } = await db
+      .from('clients')
+      .select('id, business_name, contact_name, main_email, main_phone, city, zone, address, billing_email, administrative_contact')
+      .eq('owner_profile_id', user.id)
+      .maybeSingle();
+
+    const payload: ClientProfilePanelData = {
+      profile: {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        phone: profile.phone,
+        avatar_url: profile.avatar_url,
+      },
+      client: client
+        ? {
+            id: client.id,
+            business_name: client.business_name,
+            contact_name: client.contact_name,
+            main_email: client.main_email,
+            main_phone: client.main_phone,
+            city: client.city,
+            zone: client.zone,
+            address: client.address,
+            billing_email: client.billing_email,
+            administrative_contact: client.administrative_contact,
+          }
+        : null,
+    };
+
+    return { data: payload, error: null };
+  } catch (err: unknown) {
+    console.error('Error loading profile panel data:', err);
+    return { data: null as ClientProfilePanelData | null, error: serializeErrorMessage(err, 'No se pudo cargar el perfil') };
+  }
+}
+
+export async function updateClientProfilePanelAction(formData: {
+  fullName: string;
+  phone?: string;
+  avatarUrl?: string;
+  contactName?: string;
+  mainPhone?: string;
+  city?: string;
+  zone?: string;
+  address?: string;
+  billingEmail?: string;
+  administrativeContact?: string;
+}) {
+  try {
+    const supabase = await createServerClientComponent();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (authError || !user) {
+      return { data: null, error: 'Sesión inválida' };
+    }
+
+    const fullName = formData.fullName?.trim();
+    if (!fullName) {
+      return { data: null, error: 'El nombre completo es obligatorio' };
+    }
+
+    const db = supabaseAdmin || supabase;
+    const nowIso = new Date().toISOString();
+    const profileUpdatePayload: {
+      full_name: string;
+      phone: string | null;
+      updated_at: string;
+      avatar_url?: string | null;
+    } = {
+      full_name: fullName,
+      phone: formData.phone?.trim() || null,
+      updated_at: nowIso,
+    };
+
+    if (typeof formData.avatarUrl !== 'undefined') {
+      profileUpdatePayload.avatar_url = formData.avatarUrl?.trim() || null;
+    }
+
+    const { error: profileUpdateError } = await db
+      .from('profiles')
+      .update(profileUpdatePayload)
+      .eq('id', user.id);
+
+    if (profileUpdateError) {
+      return { data: null, error: 'No se pudo actualizar el perfil' };
+    }
+
+    const { data: client } = await db
+      .from('clients')
+      .select('id')
+      .eq('owner_profile_id', user.id)
+      .maybeSingle();
+
+    if (client?.id) {
+      const { error: clientUpdateError } = await db
+        .from('clients')
+        .update({
+          contact_name: formData.contactName?.trim() || fullName,
+          main_phone: formData.mainPhone?.trim() || null,
+          city: formData.city?.trim() || null,
+          zone: formData.zone?.trim() || null,
+          address: formData.address?.trim() || null,
+          billing_email: formData.billingEmail?.trim() || null,
+          administrative_contact: formData.administrativeContact?.trim() || null,
+          updated_at: nowIso,
+        })
+        .eq('id', client.id);
+
+      if (clientUpdateError) {
+        return { data: null, error: 'Se actualizó el perfil, pero falló la información empresarial' };
+      }
+    }
+
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile');
+    revalidatePath('/dashboard/visits');
+    revalidatePath('/dashboard/payments');
+
+    return { data: { updated: true }, error: null };
+  } catch (err: unknown) {
+    console.error('Error updating profile panel:', err);
+    return { data: null, error: serializeErrorMessage(err, 'No se pudo actualizar tu perfil') };
+  }
 }
 
 export async function getClientAccessState(userId: string): Promise<ClientAccessState> {

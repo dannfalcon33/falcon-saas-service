@@ -8,17 +8,15 @@ import {
   ArrowUpRight,
   Clock,
   CheckCircle2,
-  Package
+  Package,
+  UserPlus
 } from 'lucide-react';
-import { createServerClientComponent } from '@/lib/supabase-server';
 import { getAdminStats } from '@/lib/actions/admin.actions';
 import { StatCard } from '@/components/dashboard/Common';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 
 export default async function AdminDashboardPage() {
-  const supabase = await createServerClientComponent();
-
   const { data: stats, error } = await getAdminStats();
   
   if (error || !stats) {
@@ -30,6 +28,7 @@ export default async function AdminDashboardPage() {
     { title: "MRR Estimado", value: `$${stats.mrr}`, icon: TrendingUp, color: "emerald" as const, trend: "Ingreso mensual" },
     { title: "Pagos Pendientes", value: stats.pendingPayments, icon: CreditCard, color: "amber" as const, trend: "Por validar" },
     { title: "Suscripciones", value: stats.activeSubscriptions, icon: Package, color: "blue" as const, trend: "Planes activos" },
+    { title: "Leads Recibidos", value: stats.totalLeads, icon: UserPlus, color: "blue" as const, trend: `${stats.leadsLast7Days} en 7 días` },
     { title: "Por Vencer (7d)", value: stats.expiringSoon, icon: Clock, color: "amber" as const, trend: "Seguimiento" },
     { title: "Vencidas", value: stats.expired, icon: AlertTriangle, color: "red" as const, trend: "Requiere atención" },
     { title: "Incidencias VIP", value: stats.openIncidents, icon: AlertTriangle, color: "red" as const, trend: `${stats.criticalIncidents} Críticas` },

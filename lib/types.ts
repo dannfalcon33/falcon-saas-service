@@ -246,3 +246,58 @@ export interface UseCase {
   title: string;
   description: string;
 }
+
+export type ClientNotificationType =
+  | 'payment_approved'
+  | 'incident_resolved'
+  | 'report_received'
+  | 'visit_approved';
+
+export interface ClientNotification {
+  id: string;
+  type: ClientNotificationType;
+  title: string;
+  message: string;
+  occurred_at: string;
+  href: string;
+}
+
+export type AdminNotificationType =
+  | 'lead_received'
+  | 'payment_submitted'
+  | 'incident_opened'
+  | 'visit_request_pending'
+  | 'report_uploaded';
+
+export interface AdminNotification {
+  id: string;
+  type: AdminNotificationType;
+  title: string;
+  message: string;
+  occurred_at: string;
+  href: string;
+}
+
+export type DashboardNotification = ClientNotification | AdminNotification;
+
+export interface ClientProfilePanelData {
+  profile: {
+    id: string;
+    email: string;
+    full_name: string;
+    phone?: string | null;
+    avatar_url?: string | null;
+  };
+  client: {
+    id: string;
+    business_name: string;
+    contact_name: string;
+    main_email: string;
+    main_phone?: string | null;
+    city?: string | null;
+    zone?: string | null;
+    address?: string | null;
+    billing_email?: string | null;
+    administrative_contact?: string | null;
+  } | null;
+}

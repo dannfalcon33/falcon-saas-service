@@ -35,7 +35,8 @@ export default async function DashboardLayout({
       user={{
         full_name: userProfile.full_name,
         email: userProfile.email,
-        role: userProfile.role
+        role: userProfile.role,
+        avatar_url: userProfile.avatar_url || null,
       }}
     >
       {children}

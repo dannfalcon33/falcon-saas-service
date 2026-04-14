@@ -1,15 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User, Bell, Search, LogOut, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  User,
+  Bell,
+  Search,
+  LogOut,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Wrench,
+  FileText,
+  CalendarCheck2,
+  Loader2,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { getClientNotifications } from '@/lib/actions/dashboard.actions';
+import { getAdminNotifications } from '@/lib/actions/admin.actions';
+import { DashboardNotification } from '@/lib/types';
 
 interface TopbarProps {
   user: {
     full_name: string;
     email: string;
     role: string;
+    avatar_url?: string | null;
   };
   onToggleSidebar?: () => void;
   isSidebarCollapsed?: boolean;
@@ -19,6 +36,114 @@ export const Topbar = ({ user, onToggleSidebar, isSidebarCollapsed }: TopbarProp
   const router = useRouter();
   const supabase = createClient();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const bellContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const isClientRole = useMemo(() => user.role === 'client', [user.role]);
+  const isAdminRole = useMemo(() => user.role === 'admin', [user.role]);
+  const hasNotificationFeed = isClientRole || isAdminRole;
+  const notificationSeenStorageKey = useMemo(
+    () => `falconit_notifications_last_seen_${user.role}_${user.email}`,
+    [user.email, user.role]
+  );
+
+  const formatDateTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--/--/---- --:-- UTC';
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes} UTC`;
+  };
+
+  const loadNotifications = async () => {
+    if (!hasNotificationFeed) return;
+    setIsLoadingNotifications(true);
+    const { data, error } = isAdminRole
+      ? await getAdminNotifications(20)
+      : await getClientNotifications(20);
+    setIsLoadingNotifications(false);
+    if (error) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    const items = data || [];
+    setNotifications(items);
+
+    const lastSeenRaw = typeof window !== 'undefined' ? window.localStorage.getItem(notificationSeenStorageKey) : null;
+    const lastSeenMs = lastSeenRaw ? new Date(lastSeenRaw).getTime() : 0;
+    const unread = items.filter((item) => {
+      const occurredAt = new Date(item.occurred_at).getTime();
+      if (Number.isNaN(occurredAt)) return false;
+      return occurredAt > lastSeenMs;
+    }).length;
+    setUnreadCount(unread);
+  };
+
+  const markNotificationsAsSeen = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(notificationSeenStorageKey, new Date().toISOString());
+    }
+    setUnreadCount(0);
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, [hasNotificationFeed, isAdminRole, notificationSeenStorageKey]);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (!bellContainerRef.current) return;
+      if (!bellContainerRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const openProfilePanel = () => {
+    if (isClientRole) {
+      router.push('/dashboard/profile');
+      return;
+    }
+    router.push('/admin');
+  };
+
+  const openNotificationTarget = (href: string) => {
+    markNotificationsAsSeen();
+    setIsNotificationsOpen(false);
+    router.push(href);
+  };
+
+  const getNotificationIcon = (type: DashboardNotification['type']) => {
+    switch (type) {
+      case 'payment_approved':
+        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+      case 'payment_submitted':
+        return <CheckCircle2 className="w-4 h-4 text-amber-400" />;
+      case 'incident_resolved':
+      case 'incident_opened':
+        return <Wrench className="w-4 h-4 text-blue-400" />;
+      case 'report_received':
+      case 'report_uploaded':
+        return <FileText className="w-4 h-4 text-amber-400" />;
+      case 'visit_approved':
+      case 'visit_request_pending':
+        return <CalendarCheck2 className="w-4 h-4 text-purple-400" />;
+      case 'lead_received':
+        return <User className="w-4 h-4 text-cyan-400" />;
+      default:
+        return <Bell className="w-4 h-4 text-white/50" />;
+    }
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -61,23 +186,94 @@ export const Topbar = ({ user, onToggleSidebar, isSidebarCollapsed }: TopbarProp
       </div>
 
       <div className="flex items-center gap-2 md:gap-6">
-        <button className="relative text-white/40 hover:text-white transition-colors p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#3D7BFF] rounded-full border-2 border-[#020617]" />
-        </button>
+        <div ref={bellContainerRef} className="relative">
+          <button
+            onClick={() => {
+              const next = !isNotificationsOpen;
+              setIsNotificationsOpen(next);
+              if (next) {
+                markNotificationsAsSeen();
+                loadNotifications();
+              }
+            }}
+            className="relative text-white/40 hover:text-white transition-colors p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5"
+            title="Notificaciones"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[1.15rem] h-[1.15rem] px-1 bg-red-500 text-white text-[10px] font-black rounded-full border border-[#020617] leading-[1.05rem] text-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {isNotificationsOpen && (
+            <div className="absolute right-0 mt-3 w-[360px] max-w-[90vw] bg-[#0B1622] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                <p className="text-xs font-black uppercase tracking-widest text-white/70">Notificaciones</p>
+                <button
+                  onClick={loadNotifications}
+                  className="text-[10px] font-black uppercase tracking-widest text-[#3D7BFF] hover:text-white transition-colors"
+                >
+                  Actualizar
+                </button>
+              </div>
+
+              <div className="max-h-[380px] overflow-y-auto">
+                {isLoadingNotifications ? (
+                  <div className="px-4 py-8 flex items-center justify-center text-white/50">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs font-medium text-white/40">
+                    No tienes notificaciones recientes.
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => openNotificationTarget(notification.href)}
+                      className="w-full px-4 py-3 text-left border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">{getNotificationIcon(notification.type)}</div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-white">{notification.title}</p>
+                          <p className="text-[11px] text-[#8A9199] leading-relaxed">{notification.message}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
+                            {formatDateTime(notification.occurred_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="h-8 w-px bg-white/10 hidden md:block" />
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-4 p-1 rounded-full bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
+          <button
+            onClick={openProfilePanel}
+            className="flex items-center gap-4 p-1 rounded-full bg-white/5 border border-white/5 hover:border-white/10 transition-all group"
+            title="Perfil de usuario"
+          >
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#1F2937] border border-white/10 flex items-center justify-center text-[#3D7BFF] font-bold group-hover:scale-105 transition-transform overflow-hidden">
-              <User className="w-5 h-5" />
+              {user.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5" />
+              )}
             </div>
             <div className="text-left hidden lg:block pr-4">
               <p className="text-sm font-bold text-white group-hover:text-[#3D7BFF] transition-colors line-clamp-1">{user.full_name}</p>
               <p className="text-[10px] text-[#8A9199] font-black uppercase tracking-widest leading-none mt-0.5">{user.role}</p>
             </div>
-          </div>
+          </button>
 
           <button 
             onClick={handleSignOut}

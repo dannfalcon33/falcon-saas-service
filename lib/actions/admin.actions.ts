@@ -1,8 +1,26 @@
 'use server';
 
 import { createServerClientComponent, supabaseAdmin } from '@/lib/supabase-server';
-import { Client, Payment, ClientStatus, Subscription, Visit, VisitRequest, VisitType } from '@/lib/types';
+import {
+  AdminNotification,
+  Client,
+  Payment,
+  ClientStatus,
+  Subscription,
+  Visit,
+  VisitRequest,
+  VisitType,
+} from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+
+function serializeErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
 
 /**
  * Get all clients with their current subscription and plan info
@@ -729,6 +747,19 @@ export async function getAdminStats() {
     .gte('scheduled_start', startOfWeek.toISOString())
     .lte('scheduled_start', endOfWeek.toISOString());
 
+  // 6. Leads metrics
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { count: totalLeads } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: leadsLast7Days } = await supabase
+    .from('leads')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', sevenDaysAgo.toISOString());
+
   return {
     data: {
       activeClients: activeClients || 0,
@@ -740,7 +771,150 @@ export async function getAdminStats() {
       openIncidents,
       criticalIncidents,
       visitsThisWeek: visitsThisWeek || 0,
+      totalLeads: totalLeads || 0,
+      leadsLast7Days: leadsLast7Days || 0,
     },
     error: null
   };
+}
+
+/**
+ * Build admin-facing notifications from operational events.
+ */
+export async function getAdminNotifications(limit: number = 20) {
+  try {
+    const supabase = await createServerClientComponent();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (authError || !user) {
+      return { data: [] as AdminNotification[], unreadCount: 0, error: 'Sesión inválida' };
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.role !== 'admin') {
+      return { data: [] as AdminNotification[], unreadCount: 0, error: 'Acceso denegado' };
+    }
+
+    const db = supabaseAdmin || supabase;
+
+    const [leadsRes, paymentsRes, incidentsRes, visitRequestsRes, reportsRes] = await Promise.all([
+      db
+        .from('leads')
+        .select('id, full_name, company_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20),
+      db
+        .from('payments')
+        .select('id, reference_code, submitted_at, created_at, clients:client_id(business_name)')
+        .eq('status', 'submitted')
+        .order('submitted_at', { ascending: false })
+        .limit(20),
+      db
+        .from('incidents')
+        .select('id, title, priority, reported_at, updated_at, clients:client_id(business_name)')
+        .neq('title', 'Solicitud de visita técnica')
+        .in('status', ['open', 'in_progress'])
+        .order('reported_at', { ascending: false })
+        .limit(20),
+      db
+        .from('visit_requests')
+        .select('id, title, requested_at, priority, clients:client_id(business_name)')
+        .eq('status', 'pending')
+        .order('requested_at', { ascending: false })
+        .limit(20),
+      db
+        .from('service_reports')
+        .select('id, title, created_at, clients:client_id(business_name)')
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
+
+    const notifications: AdminNotification[] = [];
+
+    for (const lead of leadsRes.data || []) {
+      notifications.push({
+        id: `lead-${lead.id}`,
+        type: 'lead_received',
+        title: 'Nuevo prospecto',
+        message: `${lead.company_name || lead.full_name || 'Lead'} ingresó al embudo comercial.`,
+        occurred_at: lead.created_at || new Date().toISOString(),
+        href: '/admin/leads',
+      });
+    }
+
+    for (const payment of paymentsRes.data || []) {
+      const occurredAt = payment.submitted_at || payment.created_at || new Date().toISOString();
+      const clientName = (payment.clients as { business_name?: string } | null)?.business_name;
+      notifications.push({
+        id: `payment-submitted-${payment.id}`,
+        type: 'payment_submitted',
+        title: 'Pago por validar',
+        message: clientName
+          ? `${clientName} cargó un comprobante${payment.reference_code ? ` (${payment.reference_code})` : ''}.`
+          : `Se recibió un nuevo comprobante${payment.reference_code ? ` (${payment.reference_code})` : ''}.`,
+        occurred_at: occurredAt,
+        href: '/admin/payments',
+      });
+    }
+
+    for (const incident of incidentsRes.data || []) {
+      const clientName = (incident.clients as { business_name?: string } | null)?.business_name;
+      notifications.push({
+        id: `incident-open-${incident.id}`,
+        type: 'incident_opened',
+        title: 'Incidencia activa',
+        message: clientName
+          ? `${clientName}: ${incident.title}`
+          : incident.title,
+        occurred_at: incident.reported_at || incident.updated_at || new Date().toISOString(),
+        href: '/admin/incidents',
+      });
+    }
+
+    for (const request of visitRequestsRes.data || []) {
+      const clientName = (request.clients as { business_name?: string } | null)?.business_name;
+      notifications.push({
+        id: `visit-request-${request.id}`,
+        type: 'visit_request_pending',
+        title: 'Solicitud de visita pendiente',
+        message: clientName
+          ? `${clientName}: ${request.title || 'Solicitud técnica'}`
+          : request.title || 'Solicitud técnica pendiente por programar.',
+        occurred_at: request.requested_at || new Date().toISOString(),
+        href: '/admin/visits',
+      });
+    }
+
+    for (const report of reportsRes.data || []) {
+      const clientName = (report.clients as { business_name?: string } | null)?.business_name;
+      notifications.push({
+        id: `report-${report.id}`,
+        type: 'report_uploaded',
+        title: 'Reporte técnico registrado',
+        message: clientName
+          ? `${clientName}: ${report.title}`
+          : report.title,
+        occurred_at: report.created_at || new Date().toISOString(),
+        href: '/admin/reports',
+      });
+    }
+
+    notifications.sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+    const sliced = notifications.slice(0, Math.max(1, limit));
+
+    return { data: sliced, unreadCount: sliced.length, error: null };
+  } catch (err: unknown) {
+    console.error('Error fetching admin notifications:', err);
+    return {
+      data: [] as AdminNotification[],
+      unreadCount: 0,
+      error: serializeErrorMessage(err, 'No se pudieron cargar las notificaciones'),
+    };
+  }
 }

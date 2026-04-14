@@ -4,18 +4,41 @@ import {
   Calendar, 
   Activity, 
   Clock, 
-  AlertCircle,
   ArrowRight,
-  TrendingUp,
-  MapPin
+  TrendingUp
 } from 'lucide-react';
 import { createServerClientComponent } from '@/lib/supabase-server';
 import { getCurrentSubscription, getClientDashboardData, getAuthenticatedClientContext } from '@/lib/actions/dashboard.actions';
-import { StatCard, StatusBadge } from '@/components/dashboard/Common';
+import { StatCard } from '@/components/dashboard/Common';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { FileText, MessageSquare, List } from 'lucide-react';
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const toUtcDayStamp = (value: string | Date): number | null => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+};
+
+const getRemainingPlanDays = (activatedAt?: string, endDate?: string): number | null => {
+  const endStamp = endDate ? toUtcDayStamp(endDate) : null;
+  if (endStamp === null) return null;
+
+  const todayStamp = toUtcDayStamp(new Date());
+  if (todayStamp === null) return null;
+
+  const activationStamp = activatedAt ? toUtcDayStamp(activatedAt) : null;
+
+  if (activationStamp !== null) {
+    const totalDays = Math.max(0, Math.ceil((endStamp - activationStamp) / DAY_IN_MS));
+    const elapsedDays = Math.max(0, Math.ceil((todayStamp - activationStamp) / DAY_IN_MS));
+    return Math.max(0, totalDays - elapsedDays);
+  }
+
+  return Math.max(0, Math.ceil((endStamp - todayStamp) / DAY_IN_MS));
+};
 
 export default async function ClientDashboardPage() {
   const { clientId } = await getAuthenticatedClientContext();
@@ -25,7 +48,7 @@ export default async function ClientDashboardPage() {
   // Get client details for display
   const { data: client } = await supabase
     .from('clients')
-    .select('id, business_name, status, zone')
+    .select('id, business_name, status')
     .eq('id', clientId)
     .single();
 
@@ -59,10 +82,26 @@ export default async function ClientDashboardPage() {
 
   const activeOrPending = subscription || pendingSub;
   const visitStats = stats?.subscriptionStats;
-
-  const expirationDays = subscription?.days_remaining || 0;
-  const isExpiring = subscription && expirationDays <= 7 && expirationDays > 0;
-  const isExpired = subscription && expirationDays === 0;
+  const planActivatedAt = subscription?.activated_at || subscription?.start_date;
+  const planEndDate = subscription?.end_date;
+  const remainingPlanDays = subscription
+    ? getRemainingPlanDays(planActivatedAt, planEndDate)
+    : null;
+  const isNearPlanExpiration = !!subscription && remainingPlanDays !== null && remainingPlanDays > 0 && remainingPlanDays <= 3;
+  const isPlanExpired = !!subscription && remainingPlanDays === 0;
+  const remainingPlanDaysLabel = remainingPlanDays === null
+    ? 'Sin fecha de vencimiento'
+    : remainingPlanDays === 1
+      ? '1 día restante'
+      : `${remainingPlanDays} días restantes`;
+  const planEndLabel = planEndDate
+    ? new Date(planEndDate).toLocaleDateString('es-VE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : null;
 
   return (
     <div className="space-y-10">
@@ -133,12 +172,21 @@ export default async function ClientDashboardPage() {
         <StatCard 
           title="Plan Activo" 
           value={activeOrPending?.plan?.name || "Sin Plan"} 
-          subtitle={subscription ? "SLA y Soporte Activo" : "Esperando Pago"}
+          subtitle={subscription ? remainingPlanDaysLabel : "Esperando Pago"}
           icon={Zap}
-          color={subscription ? "emerald" : "amber"}
-          trend={subscription ? "Protegido" : "Inactivo"}
+          color={isPlanExpired ? "red" : isNearPlanExpiration ? "amber" : subscription ? "emerald" : "amber"}
+          trend={subscription ? (planEndLabel ? `Vence: ${planEndLabel}` : "Vencimiento no disponible") : "Inactivo"}
         />
       </div>
+
+      {isNearPlanExpiration && (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-4">
+          <p className="text-xs font-black uppercase tracking-wider text-amber-300">Alerta de renovación</p>
+          <p className="mt-1 text-sm text-amber-100">
+            Tu plan vence en {remainingPlanDaysLabel}. Debes renovar y contactar al administrador Falcon.
+          </p>
+        </div>
+      )}
 
       {/* Secondary Content Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -222,15 +270,6 @@ export default async function ClientDashboardPage() {
                   <p className="text-[10px] text-[#8A9199] italic">Calendario asignado</p>
                 </div>
               </Link>
-           </div>
-
-           <div className="bg-[#1F3A5F]/10 border border-[#1F3A5F]/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center">
-             <div className="w-16 h-16 bg-emerald-400/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-400/20 shadow-2xl">
-               <MapPin className="w-8 h-8 text-emerald-400" />
-             </div>
-             <h3 className="text-lg font-bold text-white mb-1">Tu Zona</h3>
-             <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-4">Maracaibo / {client.zone || 'Norte'}</p>
-             <p className="text-[11px] text-[#8A9199] font-medium leading-relaxed italic">Atención técnica prioritaria según tu ubicación.</p>
            </div>
         </div>
       </div>
