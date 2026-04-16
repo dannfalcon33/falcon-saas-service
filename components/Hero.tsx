@@ -20,7 +20,7 @@ export const Hero = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight font-serif tracking-tight"
         >
-          Reduce fallas, tiempos muertos y riesgos tecnológicos en menos de{" "}
+          Continuidad operativa tecnológica para empresas en menos de{" "}
           <span className="text-[#C0C6CF] drop-shadow-[0_0_15px_rgba(192,198,207,0.5)]">
             24h
           </span>
@@ -32,9 +32,8 @@ export const Hero = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-xl md:text-2xl text-[#8A9199] max-w-4xl mx-auto mb-8 leading-relaxed font-light"
         >
-          Nos encargamos del soporte, mantenimiento y respaldo de tu empresa
-          para que operes sin interrupciones, sin necesidad de contratar
-          personal interno.
+          Operamos tu departamento IT externo por suscripción para mantener tu
+          producción y ejecución sin interrupciones, sin ampliar nómina interna.
         </motion.p>
 
         <motion.ul
@@ -44,16 +43,16 @@ export const Hero = () => {
           className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-12 text-[#C0C6CF] text-sm md:text-base font-medium"
         >
           <li className="flex justify-center items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Soporte remoto y
-            presencial
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Gestión de
+            incidencias remota y en sitio
           </li>
           <li className="flex justify-center items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Respuesta rápida
-            garantizada
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Monitoreo y SLA
+            orientados a continuidad
           </li>
           <li className="flex justify-center items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Backups seguros
-            en la nube
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Backups y
+            reportes técnicos auditables
           </li>
         </motion.ul>
 

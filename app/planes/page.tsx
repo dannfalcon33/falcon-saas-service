@@ -1,6 +1,16 @@
 import React from "react";
+import type { Metadata } from "next";
 import { ArrowLeft, CheckCircle2, Zap, Shield, Crown } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Planes de IT por Suscripción para Empresas",
+  description:
+    "Compara los planes Básico, Empresarial y Corporativo de Falcon IT para continuidad operativa tecnológica y gestión IT externa por suscripción.",
+  alternates: {
+    canonical: "/planes",
+  },
+};
 
 export default function PlanesPage() {
   const comparisonData = [

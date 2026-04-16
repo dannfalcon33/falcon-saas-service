@@ -38,9 +38,9 @@ export const stats: Stat[] = [
 export const features: Feature[] = [
   {
     icon: HeadphonesIcon,
-    title: "Soporte Continuo Híbrido",
+    title: "Operación IT Continua",
     description:
-      "Resolvemos incidencias antes de que afecten tu operación, combinando monitoreo 24/7 y asistencia técnica experta.",
+      "Gestionamos incidencias antes de que impacten tu producción, combinando monitoreo activo y operación remota/presencial.",
   },
   {
     icon: Activity,
@@ -56,9 +56,9 @@ export const features: Feature[] = [
   },
   {
     icon: Server,
-    title: "Infraestructura IT",
+    title: "Infraestructura Empresarial",
     description:
-      "Redes que no se caen. Optimización absoluta de servidores y WiFi corporativo veloz y seguro.",
+      "Estabilidad de redes, servidores y WiFi corporativo para sostener la continuidad de tu ejecución diaria.",
   },
 ];
 
@@ -138,7 +138,7 @@ export const faqs: FAQ[] = [
   {
     question: "¿De que va el servicio?",
     answer:
-      "Somos una servicio de Soporte IT para empresas y pymes por un unico pago por suscripcion, nos encargamos de mantener tu infraestructura tecnológica funcionando correctamente, desde redes hasta computadoras y servidores.",
+      "Somos un proveedor B2B de continuidad operativa tecnológica por suscripción. Operamos un departamento IT externo para mantener redes, equipos, sistemas y datos empresariales funcionando sin interrupciones.",
   },
   {
     question: "¿Qué incluye el servicio?",

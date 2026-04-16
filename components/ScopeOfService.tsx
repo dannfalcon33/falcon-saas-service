@@ -24,8 +24,8 @@ export const ScopeOfService = () => {
             Alcance del Servicio
           </h2>
           <p className="text-[#8A9199] text-lg">
-            Soporte técnico y mantenimiento diseñado específicamente para las
-            necesidades de tu empresa, aportando beneficios reales y tangibles.
+            Continuidad operativa tecnológica diseñada para empresas con alta
+            dependencia de hardware, software, red y datos críticos.
           </p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
