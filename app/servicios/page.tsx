@@ -1,6 +1,16 @@
 import React from "react";
+import type { Metadata } from "next";
 import { ArrowLeft, Layers, BookOpen, ShieldAlert, AlertTriangle, Briefcase } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Servicios de Continuidad Operativa Tecnológica",
+  description:
+    "Conoce el alcance operativo de Falcon IT: incidencias, mantenimiento preventivo, visitas técnicas, monitoreo y gestión de continuidad para empresas.",
+  alternates: {
+    canonical: "/servicios",
+  },
+};
 
 export default function ServiciosPage() {
   const definitions = [
@@ -32,7 +42,9 @@ export default function ServiciosPage() {
             Detalles de Servicios
           </h1>
           <p className="text-[#8A9199] text-xl max-w-2xl mx-auto leading-relaxed italic font-serif opacity-80">
-            Información operativa detallada sobre el modelo de soporte IT de Falcon IT, alcances y definiciones contractuales.
+            Información operativa detallada sobre el modelo de continuidad
+            operativa tecnológica de Falcon IT, alcances y definiciones
+            contractuales.
           </p>
         </div>
 
@@ -42,7 +54,9 @@ export default function ServiciosPage() {
           </h2>
           <div className="p-10 rounded-3xl bg-[#0B1622] border border-white/5 shadow-2xl">
             <p className="text-[#8A9199] text-lg mb-8 leading-relaxed font-medium">
-              Falcon IT ofrece un servicio de soporte IT por suscripción estructurado en tres niveles, diseñados según la criticidad operativa y dependencia tecnológica del cliente.
+              Falcon IT ofrece un servicio de continuidad operativa tecnológica
+              por suscripción, estructurado en tres niveles según la criticidad
+              del negocio y su dependencia tecnológica.
             </p>
             <p className="text-[#C0C6CF] font-bold mb-6 uppercase tracking-widest text-xs">Cada plan define una estructura clara de:</p>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
