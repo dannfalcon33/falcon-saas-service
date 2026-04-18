@@ -45,6 +45,7 @@ interface VisitTableProps {
 }
 
 export const VisitTable = ({ initialVisits, initialRequests }: VisitTableProps) => {
+  const CARACAS_TIME_ZONE = 'America/Caracas';
   const router = useRouter();
   const supabase = createClient();
   const [visits, setVisits] = useState(initialVisits);
@@ -77,18 +78,23 @@ export const VisitTable = ({ initialVisits, initialRequests }: VisitTableProps) 
   const formatDate = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '--/--/----';
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const year = date.getUTCFullYear();
-    return `${day}/${month}/${year}`;
+    return date.toLocaleDateString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: CARACAS_TIME_ZONE,
+    });
   };
 
   const formatTime = (value: string) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '--:-- UTC';
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${hours}:${minutes} UTC`;
+    if (Number.isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString('es-VE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: CARACAS_TIME_ZONE,
+    });
   };
 
   const formatDateTime = (value: string) => `${formatDate(value)} ${formatTime(value)}`;
