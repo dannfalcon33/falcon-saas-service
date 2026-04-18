@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -17,11 +17,17 @@ import {
   Upload,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Maximize2,
+  X
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { plans } from "@/lib/constants";
-import { Plan } from "@/lib/types";
+import {
+  MANUAL_BINANCE_PAY_EMAIL,
+  MANUAL_BINANCE_PAY_ID,
+  MANUAL_BINANCE_PAY_QR_URL,
+} from "@/lib/payment-config";
 
 const paymentMethods = [
   { id: "binance", label: "Binance Pay", icon: CreditCard, color: "#F3BA2F" },
@@ -58,6 +64,8 @@ function BillingContent() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
   const isPasswordValid = formData.password.length >= 6;
   const passwordsMatch = formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword;
   const canSubmit = formData.aceptaTerminos && !isSubmitting && isPasswordValid && passwordsMatch;
@@ -71,6 +79,14 @@ function BillingContent() {
     }
     if (!passwordsMatch) {
       alert("Las contraseñas no coinciden.");
+      return;
+    }
+    if (selectedPayment === "binance" && !formData.referencia.trim()) {
+      alert("Debes registrar una referencia de Binance antes de enviar.");
+      return;
+    }
+    if (selectedPayment === "binance" && !formData.proofFile) {
+      alert("Debes adjuntar el comprobante de Binance (captura o PDF).");
       return;
     }
     
@@ -335,54 +351,101 @@ function BillingContent() {
                       <CreditCard className="w-6 h-6 text-[#F3BA2F]" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-lg">Binance Pay (API Ready)</p>
-                      <p className="text-xs text-[#F3BA2F] font-bold uppercase tracking-widest">Pago Instantáneo</p>
+                      <p className="text-white font-bold text-lg">Binance Pay (Validación Manual)</p>
+                      <p className="text-xs text-[#F3BA2F] font-bold uppercase tracking-widest">ID + Comprobante Obligatorio</p>
                     </div>
                   </div>
                   
                   <div className="space-y-4 mb-8">
-                    <div className="space-y-4">
-                     <label className="text-xs font-bold text-[#F3BA2F] uppercase opacity-60 ml-1">ID de Transacción / Correo</label>
-                     <input 
-                      type="text" 
-                      placeholder="Ej: Binary ID o Correo" 
-                      className="w-full bg-black/50 border border-[#F3BA2F]/20 rounded-xl p-4 outline-none focus:border-[#F3BA2F] text-white" 
-                      value={formData.referencia || ""}
-                      onChange={(e) => setFormData({...formData, referencia: e.target.value})}
-                    />
-                    <input 
-                      type="file" 
-                      id="proof-upload-binance" 
-                      className="hidden" 
-                      accept="image/*,.pdf"
-                      onChange={(e) => setFormData({...formData, proofFile: e.target.files?.[0] || null})}
-                    />
-                    <label 
-                      htmlFor="proof-upload-binance"
-                      className={`w-full border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
-                        formData.proofFile 
-                          ? 'bg-emerald-500/5 border-emerald-500/40' 
-                          : 'border-[#F3BA2F]/10 hover:bg-[#F3BA2F]/5'
-                      }`}
-                    >
-                      {formData.proofFile ? (
-                        <>
-                          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                          <p className="text-sm text-white font-bold">{formData.proofFile.name}</p>
-                          <p className="text-[10px] uppercase font-bold text-emerald-500/60 mt-1">Comprobante Binance listo</p>
-                        </>
+                    <div className="p-4 rounded-2xl border border-[#F3BA2F]/20 bg-black/30 space-y-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#F3BA2F]/80">Binance Pay ID</p>
+                        <p className="text-sm font-mono font-bold text-white mt-1 break-all">{MANUAL_BINANCE_PAY_ID}</p>
+                      </div>
+                      {MANUAL_BINANCE_PAY_EMAIL ? (
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[#F3BA2F]/80">Correo Binance (Opción)</p>
+                          <p className="text-sm font-bold text-white mt-1 break-all">{MANUAL_BINANCE_PAY_EMAIL}</p>
+                        </div>
+                      ) : null}
+                      {MANUAL_BINANCE_PAY_QR_URL ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsQrModalOpen(true)}
+                            className="relative w-full max-w-[260px] aspect-[9/16] rounded-2xl border border-white/10 bg-white p-2 overflow-hidden group hover:border-[#F3BA2F]/50 transition-all"
+                            title="Ver QR en grande"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={MANUAL_BINANCE_PAY_QR_URL}
+                              alt="QR Binance Pay"
+                              className="w-full h-full object-cover rounded-xl"
+                            />
+                            <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-black/70 text-white/90 border border-white/20">
+                              <Maximize2 className="w-3.5 h-3.5" />
+                              Ampliar
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsQrModalOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#F3BA2F]/30 text-[#F3BA2F] text-[10px] font-black uppercase tracking-widest hover:bg-[#F3BA2F]/10 transition-all"
+                          >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            Ver QR en grande
+                          </button>
+                          <p className="text-[10px] text-[#8A9199] font-medium">Escanea este QR desde Binance y luego reporta tu transacción.</p>
+                        </div>
                       ) : (
-                        <>
-                          <Upload className="w-8 h-8 text-[#F3BA2F] opacity-60" />
-                          <p className="text-sm text-[#8A9199]">Cargar comprobante de Binance</p>
-                          <p className="text-[10px] uppercase font-bold text-[#F3BA2F]/60 mt-1">Captura de pantalla requerida</p>
-                        </>
+                        <p className="text-xs text-amber-300/80">
+                          QR pendiente de configurar. Define `NEXT_PUBLIC_BINANCE_PAY_QR_URL` para mostrarlo aquí.
+                        </p>
                       )}
-                    </label>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-xs font-bold text-[#F3BA2F] uppercase opacity-60 ml-1">ID de Transacción / Referencia</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ej: 7A9XK12Q o correo de la operación" 
+                        className="w-full bg-black/50 border border-[#F3BA2F]/20 rounded-xl p-4 outline-none focus:border-[#F3BA2F] text-white" 
+                        value={formData.referencia || ""}
+                        onChange={(e) => setFormData({...formData, referencia: e.target.value})}
+                      />
+                      <input 
+                        type="file" 
+                        id="proof-upload-binance" 
+                        className="hidden" 
+                        accept="image/*,.pdf"
+                        onChange={(e) => setFormData({...formData, proofFile: e.target.files?.[0] || null})}
+                      />
+                      <label 
+                        htmlFor="proof-upload-binance"
+                        className={`w-full border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
+                          formData.proofFile 
+                            ? 'bg-emerald-500/5 border-emerald-500/40' 
+                            : 'border-[#F3BA2F]/10 hover:bg-[#F3BA2F]/5'
+                        }`}
+                      >
+                        {formData.proofFile ? (
+                          <>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                            <p className="text-sm text-white font-bold">{formData.proofFile.name}</p>
+                            <p className="text-[10px] uppercase font-bold text-emerald-500/60 mt-1">Comprobante Binance listo</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 text-[#F3BA2F] opacity-60" />
+                            <p className="text-sm text-[#8A9199]">Adjuntar captura de Binance o PDF</p>
+                            <p className="text-[10px] uppercase font-bold text-[#F3BA2F]/60 mt-1">Requerido para validación manual</p>
+                          </>
+                        )}
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
 
               {selectedPayment === 'zinli' && (
@@ -650,6 +713,41 @@ function BillingContent() {
         </div>
 
       </div>
+
+      {isQrModalOpen && MANUAL_BINANCE_PAY_QR_URL ? (
+        <div
+          className="fixed inset-0 z-100 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setIsQrModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-[540px] rounded-3xl border border-white/10 bg-[#0B1622] p-4 sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl border border-white/10 bg-black/40 text-white/80 hover:text-white hover:border-white/30 transition-all"
+              aria-label="Cerrar vista ampliada del QR"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="pr-12 mb-4">
+              <p className="text-sm font-bold text-white">QR Binance Pay</p>
+              <p className="text-[11px] text-[#8A9199]">Usa esta vista ampliada para escanear con el móvil.</p>
+            </div>
+
+            <div className="mx-auto w-full max-w-[420px] aspect-[9/16] rounded-2xl bg-white p-2 border border-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={MANUAL_BINANCE_PAY_QR_URL}
+                alt="QR Binance Pay ampliado"
+                className="w-full h-full object-contain rounded-xl"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

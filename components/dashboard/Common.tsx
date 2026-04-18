@@ -1,6 +1,7 @@
 import React from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { LucideIcon } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -8,12 +9,22 @@ function cn(...inputs: ClassValue[]) {
 
 // Status Badge Component
 export const StatusBadge = ({ 
-  status, 
-  variant = 'default' 
+  status
 }: { 
   status: string; 
   variant?: 'default' | 'outline' | 'ghost' 
 }) => {
+  const getStatusLabel = (s: string) => {
+    switch (s.toLowerCase()) {
+      case 'submitted':
+        return 'PENDING_VERIFICATION';
+      case 'verified':
+        return 'PAID';
+      default:
+        return s;
+    }
+  };
+
   const getStatusStyles = (s: string) => {
     switch (s.toLowerCase()) {
       case 'active':
@@ -45,7 +56,7 @@ export const StatusBadge = ({
       "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
       getStatusStyles(status)
     )}>
-      {status.replace('_', ' ')}
+      {getStatusLabel(status).replace(/_/g, ' ')}
     </span>
   );
 };
@@ -62,7 +73,7 @@ export const StatCard = ({
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: any;
+  icon: LucideIcon;
   trend?: string;
   color?: "blue" | "emerald" | "amber" | "red";
 }) => {

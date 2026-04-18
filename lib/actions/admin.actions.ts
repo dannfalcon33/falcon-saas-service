@@ -205,6 +205,43 @@ export async function verifyPayment(paymentId: string, adminProfileId: string) {
 }
 
 /**
+ * Reject a payment proof (manual validation flow)
+ */
+export async function rejectPayment(paymentId: string, adminProfileId: string, reason?: string) {
+  if (!supabaseAdmin) throw new Error('Supabase Service Role Key is missing');
+
+  const notes = reason?.trim() || null;
+
+  const { data, error } = await supabaseAdmin
+    .from('payments')
+    .update({
+      status: 'rejected',
+      verified_by: adminProfileId,
+      verified_at: new Date().toISOString(),
+      admin_notes: notes,
+    })
+    .eq('id', paymentId)
+    .eq('status', 'submitted')
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error rejecting payment:', error);
+    return { data: null, error };
+  }
+
+  if (!data) {
+    return { data: null, error: { message: 'El pago ya fue procesado por otro administrador.' } };
+  }
+
+  revalidatePath('/admin/payments');
+  revalidatePath('/dashboard/payments');
+  revalidatePath('/dashboard');
+
+  return { data, error: null };
+}
+
+/**
  * Enable dashboard access for a client (Invite + Profile)
  */
 export async function enableClientAccess(clientId: string) {

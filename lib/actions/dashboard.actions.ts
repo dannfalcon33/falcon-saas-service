@@ -13,6 +13,7 @@ import {
 } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { MANUAL_PENDING_VERIFICATION_STATUS } from '@/lib/payment-config';
 
 function serializeErrorMessage(err: unknown, fallback: string) {
   if (typeof err === 'string') return err;
@@ -220,7 +221,8 @@ export async function submitPaymentProof(formData: {
       payment_method: formData.paymentMethod,
       reference_code: formData.referenceCode,
       proof_file_url: formData.proofFileUrl,
-      status: 'submitted',
+      // 'submitted' is the DB status used as "PENDING_VERIFICATION" in the UI.
+      status: MANUAL_PENDING_VERIFICATION_STATUS,
       submitted_at: new Date().toISOString(),
     })
     .select()
