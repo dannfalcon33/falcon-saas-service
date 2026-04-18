@@ -10,11 +10,9 @@ import {
   Calendar, 
   AlertTriangle, 
   FileText, 
-  Settings,
   LogOut,
   ChevronRight,
-  Package,
-  X
+  Package
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { createClient } from '@/lib/supabase';
@@ -57,16 +55,6 @@ export const Sidebar = ({ role, isCollapsed = false, onCloseMobile }: SidebarPro
 
   return (
     <aside className={`h-screen bg-[#020617] border-r border-white/5 flex flex-col transition-all duration-300 relative`}>
-      {/* Mobile Close Button */}
-      {onCloseMobile && (
-        <button 
-          onClick={onCloseMobile}
-          className="absolute top-6 -right-12 md:hidden p-2 bg-[#020617] text-white/40 rounded-r-xl border-y border-r border-white/5"
-        >
-          <X className="w-6 h-6" />
-        </button>
-      )}
-
       {/* Logo Section */}
       <div className={`p-8 flex items-center gap-3 overflow-hidden ${isCollapsed ? 'justify-center' : ''}`}>
         <div className="w-10 h-14 bg-black border border-white/10 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.1)] shrink-0">

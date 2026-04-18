@@ -15,8 +15,9 @@ import {
   CheckCircle2,
   ArrowRight,
   Upload,
-  Info,
-  Lock
+  Lock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { plans } from "@/lib/constants";
@@ -51,14 +52,27 @@ function BillingContent() {
     aceptaTerminos: false,
     referencia: "",
     password: "",
+    confirmPassword: "",
     proofFile: null as File | null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const isPasswordValid = formData.password.length >= 6;
+  const passwordsMatch = formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword;
+  const canSubmit = formData.aceptaTerminos && !isSubmitting && isPasswordValid && passwordsMatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.aceptaTerminos) return;
+    if (!isPasswordValid) {
+      alert("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (!passwordsMatch) {
+      alert("Las contraseñas no coinciden.");
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -224,12 +238,23 @@ function BillingContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#C0C6CF] ml-1 uppercase opacity-60">Crea tu contraseña de acceso</label>
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-xs font-bold text-[#C0C6CF] ml-1 uppercase opacity-60">Crea tu contraseña de acceso</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-colors"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showPassword ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
                 <input 
                   required 
-                  type="password" 
+                  type={showPassword ? "text" : "password"}
                   placeholder="Mínimo 6 caracteres" 
                   minLength={6}
                   className="w-full bg-[#0B1622] border border-white/5 rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47]" 
@@ -237,6 +262,27 @@ function BillingContent() {
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#C0C6CF] ml-1 uppercase opacity-60">Confirma tu contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+                <input 
+                  required 
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Repite tu contraseña"
+                  minLength={6}
+                  className={`w-full bg-[#0B1622] border rounded-xl p-4 pl-12 outline-none focus:border-[#3D7BFF]/50 transition-all text-white placeholder:text-[#3A3F47] ${
+                    formData.confirmPassword && !passwordsMatch ? "border-rose-500/40" : "border-white/5"
+                  }`}
+                  value={formData.confirmPassword || ""}
+                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                />
+              </div>
+              {formData.confirmPassword && !passwordsMatch && (
+                <p className="text-[10px] text-rose-400 ml-1 font-medium">Las contraseñas no coinciden.</p>
+              )}
               <p className="text-[10px] text-[#8A9199] ml-1 italic font-medium">Usarás estos datos para entrar a tu dashboard después de pagar.</p>
             </div>
           </div>
@@ -517,11 +563,11 @@ function BillingContent() {
             
             <button 
               type="submit"
-              disabled={!formData.aceptaTerminos || isSubmitting}
+              disabled={!canSubmit}
               className="group relative w-full bg-white text-black font-black py-5 rounded-2xl transition-all hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(255,255,255,0.1)] flex items-center justify-center gap-3 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: formData.aceptaTerminos && !isSubmitting ? 'white' : '#1A1A1A',
-                color: formData.aceptaTerminos && !isSubmitting ? 'black' : '#444',
+                backgroundColor: canSubmit ? 'white' : '#1A1A1A',
+                color: canSubmit ? 'black' : '#444',
               }}
             >
               {formData.aceptaTerminos && !isSubmitting && <div className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-black/5 to-transparent skew-x-[-20deg] translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>}
