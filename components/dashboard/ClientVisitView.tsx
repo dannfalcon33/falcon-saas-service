@@ -4,36 +4,52 @@ import React from 'react';
 import { 
   Calendar, 
   Clock, 
-  MapPin, 
-  User as UserIcon,
   ShieldCheck,
   Info
 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard/Common';
 
+interface ClientVisitItem {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  visit_type?: string;
+  scheduled_start: string;
+  technician?: {
+    full_name?: string;
+  } | null;
+}
+
 interface ClientVisitViewProps {
-  visits: any[];
+  visits: ClientVisitItem[];
 }
 
 export const ClientVisitView = ({ visits }: ClientVisitViewProps) => {
+  const CARACAS_TIME_ZONE = 'America/Caracas';
   const upcomingVisits = visits.filter(v => v.status === 'scheduled');
   const pastVisits = visits.filter(v => v.status !== 'scheduled');
 
   const formatDate = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '--/--/----';
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const year = date.getUTCFullYear();
-    return `${day}/${month}/${year}`;
+    return date.toLocaleDateString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: CARACAS_TIME_ZONE,
+    });
   };
 
   const formatTime = (value: string) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '--:-- UTC';
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${hours}:${minutes} UTC`;
+    if (Number.isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString('es-VE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: CARACAS_TIME_ZONE,
+    });
   };
 
   return (
