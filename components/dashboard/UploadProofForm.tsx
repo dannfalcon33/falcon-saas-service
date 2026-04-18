@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, X, CheckCircle2, AlertCircle, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Loader2, FileText, Image as ImageIcon, CreditCard, Building2, Phone } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { submitPaymentProof } from '@/lib/actions/dashboard.actions';
 import { PaymentMethod } from '@/lib/types';
+
+type RenewalPaymentMethod = Extract<PaymentMethod, 'binance' | 'zinli' | 'transferencia'>;
 
 interface UploadProofFormProps {
   clientId: string;
@@ -20,11 +22,17 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("binance");
+  const [paymentMethod, setPaymentMethod] = useState<RenewalPaymentMethod>('binance');
   const [reference, setReference] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const getReferencePlaceholder = () => {
+    if (paymentMethod === 'transferencia') return 'Número de referencia bancaria o pago móvil';
+    if (paymentMethod === 'zinli') return 'ID o referencia del movimiento Zinli';
+    return 'ID de transacción o correo Binance';
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -92,9 +100,10 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
 
       setSuccess(true);
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error al subir el comprobante.";
       console.error("Upload error:", err);
-      setError(err.message || "Error al subir el comprobante.");
+      setError(message);
     } finally {
       setIsUploading(false);
     }
@@ -132,21 +141,18 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
             <select 
               className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all"
               value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+              onChange={(e) => setPaymentMethod(e.target.value as RenewalPaymentMethod)}
             >
               <option value="binance">Binance Pay</option>
-              <option value="pagomovil">Pago Móvil</option>
               <option value="zinli">Zinli</option>
-              <option value="transferencia">Transferencia Bancaria</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="otro">Otro</option>
+              <option value="transferencia">Pago Bancario</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Referencia / ID</label>
             <input 
               type="text" 
-              placeholder="Ej: 123456" 
+              placeholder={getReferencePlaceholder()}
               className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-sm text-white placeholder:text-white/10 outline-none focus:border-[#3D7BFF]/50 transition-all"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
@@ -154,6 +160,100 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
             />
           </div>
         </div>
+
+        {paymentMethod === 'binance' && (
+          <div className="p-5 rounded-2xl border border-[#F3BA2F]/20 bg-[#F3BA2F]/5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#F3BA2F]/10 text-[#F3BA2F] flex items-center justify-center">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Binance Pay</p>
+                <p className="text-[10px] text-[#F3BA2F] font-black uppercase tracking-widest">Pago Instantáneo</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#8A9199] leading-relaxed">
+              Realiza el pago por Binance y luego reporta aquí el ID/correo de la transacción junto con el comprobante.
+            </p>
+          </div>
+        )}
+
+        {paymentMethod === 'zinli' && (
+          <div className="p-5 rounded-2xl border border-[#6B3CF1]/20 bg-[#6B3CF1]/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#6B3CF1]/10 text-[#6B3CF1] flex items-center justify-center">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Datos para Zinli</p>
+                <p className="text-[10px] text-[#6B3CF1] font-black uppercase tracking-widest">Pago Manual</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-3">
+              <div>
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Titular</p>
+                <p className="text-sm font-bold text-white">Yoshua Daniel Soto</p>
+              </div>
+              <div className="pt-3 border-t border-white/10">
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Correo Zinli</p>
+                <p className="text-sm font-bold text-white">yoshuasoto54@gmail.com</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {paymentMethod === 'transferencia' && (
+          <div className="p-5 rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#3D7BFF]/10 text-[#3D7BFF] flex items-center justify-center">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Cuentas para Pago Bancario</p>
+                <p className="text-[10px] text-[#3D7BFF] font-black uppercase tracking-widest">Transferencia / Pago Móvil</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#3D7BFF]">Transferencia Bancamiga</p>
+                  <span className="text-[10px] text-[#3D7BFF] font-black">0172</span>
+                </div>
+                <p className="text-sm font-mono font-bold text-white">0172-0194-86-194510776</p>
+                <p className="text-[10px] text-[#8A9199]">Titular: Yoshua Daniel Soto • CI: V-25959341</p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Transferencia Venezuela (BDV)</p>
+                  <span className="text-[10px] text-white/60 font-black">0102</span>
+                </div>
+                <p className="text-sm font-mono font-bold text-white">01020732120000080130</p>
+                <p className="text-[10px] text-[#8A9199]">Titular: Yoshua Daniel Soto • CI: V-25959341</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/10 space-y-2">
+                  <div className="flex items-center gap-2 text-[#3D7BFF]">
+                    <Phone className="w-3.5 h-3.5" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Pago Móvil Bancamiga</p>
+                  </div>
+                  <p className="text-sm font-mono font-bold text-white">0422-0331995</p>
+                  <p className="text-[10px] text-[#8A9199]">CI: V-25959341 • Banco: 0172</p>
+                </div>
+                <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Phone className="w-3.5 h-3.5" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Pago Móvil BDV</p>
+                  </div>
+                  <p className="text-sm font-mono font-bold text-white">0416-4637506</p>
+                  <p className="text-[10px] text-[#8A9199]">CI: V-25959341 • Banco: 0102</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Comprobante (Máx 5MB)</label>
