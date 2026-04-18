@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 
+function errorMessage(err: unknown, fallback: string) {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -18,6 +26,15 @@ export async function POST(request: Request) {
 
     if (!full_name || !email || !company_name || !phone || !planName || !password) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
+    }
+
+    if (payment_method === 'binance') {
+      if (!reference_code?.trim()) {
+        return NextResponse.json({ error: "Debes indicar el ID de transacción Binance." }, { status: 400 });
+      }
+      if (!proofFile) {
+        return NextResponse.json({ error: "Debes adjuntar el comprobante de Binance para validación manual." }, { status: 400 });
+      }
     }
 
     if (!supabaseAdmin) {
@@ -107,9 +124,9 @@ export async function POST(request: Request) {
     if (leadError) throw leadError;
 
     return NextResponse.json(lead, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Supabase Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error, 'Error interno del servidor') }, { status: 500 });
   }
 }
 
@@ -130,7 +147,7 @@ export async function GET() {
     if (error) throw error;
 
     return NextResponse.json(leads);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: errorMessage(error, 'Error interno del servidor') }, { status: 500 });
   }
 }

@@ -2,17 +2,15 @@
 
 import React, { useState } from 'react';
 import { StatusBadge } from './Common';
-import { 
+import {
   FileText, 
   CheckCircle, 
   XCircle, 
-  Loader2, 
-  ExternalLink,
+  Loader2,
   Search,
-  Filter
 } from 'lucide-react';
 import { getSignedUrl } from '@/lib/actions/dashboard.actions';
-import { verifyPayment } from '@/lib/actions/admin.actions';
+import { rejectPayment, verifyPayment } from '@/lib/actions/admin.actions';
 import { useRouter } from 'next/navigation';
 
 interface Payment {
@@ -29,6 +27,14 @@ interface Payment {
     business_name: string;
     contact_name: string;
   };
+}
+
+function toErrorMessage(err: unknown, fallback: string) {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
 }
 
 export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayments: Payment[], adminId: string }) => {
@@ -60,7 +66,7 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
   };
 
   const handleVerify = async (paymentId: string) => {
-    if (!confirm("¿Confirmar verificación de pago? Esto activará la suscripción del cliente.")) return;
+    if (!confirm("¿Confirmar aprobación del pago? Esto activará/renovará la suscripción del cliente.")) return;
     
     setIsProcessing(paymentId);
     try {
@@ -70,8 +76,26 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
       // Update local state or just refresh
       router.refresh();
       setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: 'verified' } : p));
-    } catch (err: any) {
-      alert("Error verificando pago: " + err.message);
+    } catch (err: unknown) {
+      alert("Error verificando pago: " + toErrorMessage(err, 'No se pudo aprobar el pago.'));
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleReject = async (paymentId: string) => {
+    const reason = prompt('Motivo de rechazo (opcional):') || undefined;
+    if (!confirm("¿Confirmar rechazo del pago?")) return;
+
+    setIsProcessing(paymentId);
+    try {
+      const { error } = await rejectPayment(paymentId, adminId, reason);
+      if (error) throw error;
+
+      router.refresh();
+      setPayments(prev => prev.map(p => p.id === paymentId ? { ...p, status: 'rejected', admin_notes: reason } : p));
+    } catch (err: unknown) {
+      alert("Error rechazando pago: " + toErrorMessage(err, 'No se pudo rechazar el pago.'));
     } finally {
       setIsProcessing(null);
     }
@@ -96,8 +120,8 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
              className="bg-white/5 border border-white/5 rounded-xl py-2 px-4 text-xs text-white outline-none focus:border-[#3D7BFF]/50 cursor-pointer"
            >
               <option value="all">Todos los estados</option>
-              <option value="submitted">Pendientes</option>
-              <option value="verified">Verificados</option>
+              <option value="submitted">Pendientes Verificación</option>
+              <option value="verified">Pagados / Aprobados</option>
               <option value="rejected">Rechazados</option>
            </select>
         </div>
@@ -150,14 +174,24 @@ export const AdminPaymentTable = ({ initialPayments, adminId }: { initialPayment
                       )}
                       
                       {payment.status === 'submitted' && (
-                        <button 
-                          onClick={() => handleVerify(payment.id)}
-                          disabled={isProcessing === payment.id}
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all disabled:opacity-50"
-                        >
-                          {isProcessing === payment.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-                          Aprobar
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => handleVerify(payment.id)}
+                            disabled={isProcessing === payment.id}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all disabled:opacity-50"
+                          >
+                            {isProcessing === payment.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                            Aprobar
+                          </button>
+                          <button 
+                            onClick={() => handleReject(payment.id)}
+                            disabled={isProcessing === payment.id}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                          >
+                            {isProcessing === payment.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                            Rechazar
+                          </button>
+                        </>
                       )}
                    </div>
                 </td>

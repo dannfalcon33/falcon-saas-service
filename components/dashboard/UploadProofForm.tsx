@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Upload, X, CheckCircle2, AlertCircle, Loader2, FileText, Image as ImageIcon } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, CheckCircle2, AlertCircle, Loader2, FileText, Image as ImageIcon, CreditCard, Building2, Phone, Maximize2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { submitPaymentProof } from '@/lib/actions/dashboard.actions';
 import { PaymentMethod } from '@/lib/types';
+import {
+  MANUAL_BINANCE_PAY_EMAIL,
+  MANUAL_BINANCE_PAY_ID,
+  MANUAL_BINANCE_PAY_QR_URL,
+} from '@/lib/payment-config';
+
+type RenewalPaymentMethod = Extract<PaymentMethod, 'binance' | 'zinli' | 'transferencia'>;
 
 interface UploadProofFormProps {
   clientId: string;
@@ -20,11 +27,18 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("binance");
+  const [paymentMethod, setPaymentMethod] = useState<RenewalPaymentMethod>('binance');
   const [reference, setReference] = useState("");
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const getReferencePlaceholder = () => {
+    if (paymentMethod === 'transferencia') return 'Número de referencia bancaria o pago móvil';
+    if (paymentMethod === 'zinli') return 'ID o referencia del movimiento Zinli';
+    return 'ID de transacción Binance';
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -50,8 +64,12 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !paymentMethod || !reference) {
-      setError("Por favor completa todos los campos.");
+    if (!paymentMethod || !reference.trim()) {
+      setError("Debes indicar la referencia o ID del pago.");
+      return;
+    }
+    if (!file) {
+      setError("Debes adjuntar comprobante para validar el pago.");
       return;
     }
 
@@ -59,42 +77,44 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
     setError("");
 
     try {
-      // 1. Get current user ID for the path
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No session");
+      let proofFilePath: string | undefined;
 
-      // 2. Define path: payment-proofs/{user_id}/{subscription_id}/{filename}
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${subscriptionId}/${fileName}`;
+      if (file) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No session");
 
-      // 3. Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('payment-proofs')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${subscriptionId}/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('payment-proofs')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-      // 4. Save record in database via Server Action
+        if (uploadError) throw uploadError;
+        proofFilePath = uploadData.path;
+      }
+
       const { error: actionError } = await submitPaymentProof({
         clientId,
         subscriptionId,
         amountUsd,
         paymentMethod,
-        referenceCode: reference,
-        proofFileUrl: uploadData.path, // We store the path for signed URLs later
+        referenceCode: reference.trim(),
+        proofFileUrl: proofFilePath,
       });
 
       if (actionError) throw actionError;
 
       setSuccess(true);
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error al subir el comprobante.";
       console.error("Upload error:", err);
-      setError(err.message || "Error al subir el comprobante.");
+      setError(message);
     } finally {
       setIsUploading(false);
     }
@@ -117,6 +137,7 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 backdrop-blur-xl relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#3D7BFF]/5 rounded-full -mr-16 -mt-16 blur-2xl" />
       
@@ -132,21 +153,18 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
             <select 
               className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-sm text-white outline-none focus:border-[#3D7BFF]/50 transition-all"
               value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+              onChange={(e) => setPaymentMethod(e.target.value as RenewalPaymentMethod)}
             >
               <option value="binance">Binance Pay</option>
-              <option value="pagomovil">Pago Móvil</option>
               <option value="zinli">Zinli</option>
-              <option value="transferencia">Transferencia Bancaria</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="otro">Otro</option>
+              <option value="transferencia">Pago Bancario</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Referencia / ID</label>
             <input 
               type="text" 
-              placeholder="Ej: 123456" 
+              placeholder={getReferencePlaceholder()}
               className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-sm text-white placeholder:text-white/10 outline-none focus:border-[#3D7BFF]/50 transition-all"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
@@ -154,6 +172,141 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
             />
           </div>
         </div>
+
+        {paymentMethod === 'binance' && (
+          <div className="p-5 rounded-2xl border border-[#F3BA2F]/20 bg-[#F3BA2F]/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#F3BA2F]/10 text-[#F3BA2F] flex items-center justify-center">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Binance Pay</p>
+                <p className="text-[10px] text-[#F3BA2F] font-black uppercase tracking-widest">Validación Manual</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl border border-[#F3BA2F]/20 bg-black/30 space-y-3">
+              <div>
+                <p className="text-[10px] text-[#F3BA2F] font-black uppercase tracking-widest">Binance Pay ID</p>
+                <p className="text-xs text-white font-mono font-bold mt-1 break-all">{MANUAL_BINANCE_PAY_ID}</p>
+              </div>
+              {MANUAL_BINANCE_PAY_EMAIL ? (
+                <div>
+                  <p className="text-[10px] text-[#F3BA2F] font-black uppercase tracking-widest">Correo Binance</p>
+                  <p className="text-xs text-white font-bold mt-1 break-all">{MANUAL_BINANCE_PAY_EMAIL}</p>
+                </div>
+              ) : null}
+              {MANUAL_BINANCE_PAY_QR_URL ? (
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="relative w-full max-w-[220px] aspect-[9/16] rounded-xl border border-white/10 bg-white p-1.5 overflow-hidden group hover:border-[#F3BA2F]/50 transition-all"
+                    title="Ver QR en grande"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={MANUAL_BINANCE_PAY_QR_URL} alt="QR Binance Pay" className="w-full h-full object-cover rounded-lg" />
+                    <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider bg-black/70 text-white/90 border border-white/20">
+                      <Maximize2 className="w-3 h-3" />
+                      Ampliar
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#F3BA2F]/30 text-[#F3BA2F] text-[10px] font-black uppercase tracking-widest hover:bg-[#F3BA2F]/10 transition-all"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    Ver QR en grande
+                  </button>
+                  <p className="text-[10px] text-[#8A9199]">Escanea el QR y luego reporta tu ID de transacción.</p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-amber-300/80">Configura `NEXT_PUBLIC_BINANCE_PAY_QR_URL` para mostrar el QR.</p>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[#8A9199] leading-relaxed">
+              El usuario debe cargar ID de transacción y comprobante para revisión administrativa.
+            </p>
+          </div>
+        )}
+
+        {paymentMethod === 'zinli' && (
+          <div className="p-5 rounded-2xl border border-[#6B3CF1]/20 bg-[#6B3CF1]/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#6B3CF1]/10 text-[#6B3CF1] flex items-center justify-center">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Datos para Zinli</p>
+                <p className="text-[10px] text-[#6B3CF1] font-black uppercase tracking-widest">Pago Manual</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-3">
+              <div>
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Titular</p>
+                <p className="text-sm font-bold text-white">Yoshua Daniel Soto</p>
+              </div>
+              <div className="pt-3 border-t border-white/10">
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Correo Zinli</p>
+                <p className="text-sm font-bold text-white">yoshuasoto54@gmail.com</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {paymentMethod === 'transferencia' && (
+          <div className="p-5 rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#3D7BFF]/10 text-[#3D7BFF] flex items-center justify-center">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Cuentas para Pago Bancario</p>
+                <p className="text-[10px] text-[#3D7BFF] font-black uppercase tracking-widest">Transferencia / Pago Móvil</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#3D7BFF]">Transferencia Bancamiga</p>
+                  <span className="text-[10px] text-[#3D7BFF] font-black">0172</span>
+                </div>
+                <p className="text-sm font-mono font-bold text-white">0172-0194-86-194510776</p>
+                <p className="text-[10px] text-[#8A9199]">Titular: Yoshua Daniel Soto • CI: V-25959341</p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Transferencia Venezuela (BDV)</p>
+                  <span className="text-[10px] text-white/60 font-black">0102</span>
+                </div>
+                <p className="text-sm font-mono font-bold text-white">01020732120000080130</p>
+                <p className="text-[10px] text-[#8A9199]">Titular: Yoshua Daniel Soto • CI: V-25959341</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/10 space-y-2">
+                  <div className="flex items-center gap-2 text-[#3D7BFF]">
+                    <Phone className="w-3.5 h-3.5" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Pago Móvil Bancamiga</p>
+                  </div>
+                  <p className="text-sm font-mono font-bold text-white">0422-0331995</p>
+                  <p className="text-[10px] text-[#8A9199]">CI: V-25959341 • Banco: 0172</p>
+                </div>
+                <div className="p-4 rounded-xl border border-white/10 bg-black/30 space-y-2">
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Phone className="w-3.5 h-3.5" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Pago Móvil BDV</p>
+                  </div>
+                  <p className="text-sm font-mono font-bold text-white">0416-4637506</p>
+                  <p className="text-[10px] text-[#8A9199]">CI: V-25959341 • Banco: 0102</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Comprobante (Máx 5MB)</label>
@@ -220,5 +373,40 @@ export const UploadProofForm = ({ clientId, subscriptionId, amountUsd }: UploadP
         </button>
       </div>
     </form>
+    {isQrModalOpen && MANUAL_BINANCE_PAY_QR_URL ? (
+      <div
+        className="fixed inset-0 z-100 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={() => setIsQrModalOpen(false)}
+      >
+        <div
+          className="relative w-full max-w-[540px] rounded-3xl border border-white/10 bg-[#0B1622] p-4 sm:p-6"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setIsQrModalOpen(false)}
+            className="absolute top-4 right-4 p-2 rounded-xl border border-white/10 bg-black/40 text-white/80 hover:text-white hover:border-white/30 transition-all"
+            aria-label="Cerrar vista ampliada del QR"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="pr-12 mb-4">
+            <p className="text-sm font-bold text-white">QR Binance Pay</p>
+            <p className="text-[11px] text-[#8A9199]">Escanea este QR en tamaño grande para renovar tu plan.</p>
+          </div>
+
+          <div className="mx-auto w-full max-w-[420px] aspect-[9/16] rounded-2xl bg-white p-2 border border-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={MANUAL_BINANCE_PAY_QR_URL}
+              alt="QR Binance Pay ampliado"
+              className="w-full h-full object-contain rounded-xl"
+            />
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 };
