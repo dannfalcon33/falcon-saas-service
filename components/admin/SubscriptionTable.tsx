@@ -2,14 +2,9 @@
 
 import React, { useState } from 'react';
 import { 
-  Calendar, 
   ChevronRight, 
   RotateCcw, 
-  PauseCircle, 
-  XCircle,
   BarChart3,
-  Search,
-  ArrowUpRight,
   Package
 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard/Common';
@@ -34,6 +29,63 @@ export const SubscriptionTable = ({ initialSubs }: { initialSubs: SubscriptionWi
   const filteredSubs = filter === 'all' 
     ? initialSubs 
     : initialSubs.filter(s => s.status === filter);
+
+  const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+  const toUtcDayStamp = (value?: string) => {
+    if (!value) return null;
+
+    // DB dates usually arrive as YYYY-MM-DD. Parse directly to avoid timezone drift.
+    const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+      const [, y, m, d] = dateOnly;
+      return Date.UTC(Number(y), Number(m) - 1, Number(d));
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+  };
+
+  const getLiveRemainingDays = (sub: SubscriptionWithInfo) => {
+    const endStamp = toUtcDayStamp(sub.end_date);
+    if (endStamp === null) return Math.max(0, sub.days_remaining || 0);
+
+    const now = new Date();
+    const todayStamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    return Math.max(0, Math.ceil((endStamp - todayStamp) / DAY_IN_MS));
+  };
+
+  const getRemainingPercent = (sub: SubscriptionWithInfo, remainingDays: number) => {
+    const startStamp = toUtcDayStamp(sub.start_date);
+    const endStamp = toUtcDayStamp(sub.end_date);
+
+    if (startStamp !== null && endStamp !== null) {
+      const totalDays = Math.max(1, Math.ceil((endStamp - startStamp) / DAY_IN_MS));
+      return Math.max(0, Math.min((remainingDays / totalDays) * 100, 100));
+    }
+
+    // Fallback for legacy records without full date range.
+    return Math.max(0, Math.min((remainingDays / 30) * 100, 100));
+  };
+
+  const formatDbDate = (value?: string) => {
+    if (!value) return 'No definida';
+
+    const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+      const [, y, m, d] = dateOnly;
+      return `${d}/${m}/${y}`;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'No definida';
+    return parsed.toLocaleDateString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
 
   return (
     <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
@@ -71,7 +123,11 @@ export const SubscriptionTable = ({ initialSubs }: { initialSubs: SubscriptionWi
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {filteredSubs.map((sub) => (
+            {filteredSubs.map((sub) => {
+              const liveRemainingDays = getLiveRemainingDays(sub);
+              const remainingPercent = getRemainingPercent(sub, liveRemainingDays);
+
+              return (
               <tr key={sub.id} className="group hover:bg-white/[0.01] transition-colors">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-3">
@@ -87,17 +143,17 @@ export const SubscriptionTable = ({ initialSubs }: { initialSubs: SubscriptionWi
                 <td className="px-8 py-6">
                    <div className="space-y-1">
                       <p className="text-xs font-bold text-white">
-                        {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'No definida'}
+                        {formatDbDate(sub.end_date)}
                       </p>
                       <div className="flex items-center gap-2">
                          <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden w-20">
                             <div 
-                              className={`h-full rounded-full ${sub.days_remaining < 5 ? 'bg-red-500' : 'bg-[#3D7BFF]'}`}
-                              style={{ width: `${Math.min((sub.days_remaining / 30) * 100, 100)}%` }}
+                              className={`h-full rounded-full transition-all duration-500 ${liveRemainingDays < 5 ? 'bg-red-500' : 'bg-[#3D7BFF]'}`}
+                              style={{ width: `${remainingPercent}%` }}
                             />
                          </div>
-                         <span className={`text-[10px] font-black ${sub.days_remaining < 5 ? 'text-red-500' : 'text-[#8A9199]'}`}>
-                           {sub.days_remaining}d
+                         <span className={`text-[10px] font-black ${liveRemainingDays < 5 ? 'text-red-500' : 'text-[#8A9199]'}`}>
+                           {liveRemainingDays}d
                          </span>
                       </div>
                    </div>
@@ -125,7 +181,8 @@ export const SubscriptionTable = ({ initialSubs }: { initialSubs: SubscriptionWi
                    </div>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
