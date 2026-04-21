@@ -27,7 +27,7 @@ export const navLinks: NavLink[] = [
 ];
 
 export const stats: Stat[] = [
-  { value: "+50", label: "Empresas activas protegidas" },
+  { value: "+20", label: "Empresas y Pymes actios en la zona" },
   {
     value: "+2,000",
     label: "Incidencias resueltas sin interrupciones clínicas",
@@ -138,22 +138,22 @@ export const faqs: FAQ[] = [
   {
     question: "¿De que va el servicio?",
     answer:
-      "Somos una servicio de Soporte IT para empresas y pymes por un unico pago por suscripcion, nos encargamos de mantener tu infraestructura tecnológica funcionando correctamente, desde redes hasta computadoras y servidores.",
+      "Somos una empresa de servicio de continuidad operativa de hardware y software para empresas y pymes por un unico pago por suscripcion, nos encargamos del mantimiento y continuidad de toda tu infraestructura tecnológica funcionando correctamente, desde redes, computadoras, servidores y sistemas internos de tu empresa.",
   },
   {
     question: "¿Qué incluye el servicio?",
     answer:
-      "Sí, dependiendo del plan elegido y la naturaleza del problema. Ciertas incidencias de hardware o red requieren nuestra asistencia in situ.",
+      "Dependiendo del plan elegido, nos encargamos del mantenimiento y continuidad de toda tu infraestructura tecnológica funcionando correctamente, desde redes, computadoras, servidores y sistemas internos de tu empresa.",
   },
   {
     question: "¿Qué pasa si tengo una emergencia?",
     answer:
-      "Nuestro equipo responde a incidencias críticas en minutos, priorizando de manera inmediata cualquier afectación a la continuidad de tu negocio.",
+      "Debe realizar un reporte de incidencia y nuestro equipo responde al momento las incidencias críticas, priorizando de manera inmediata cualquier afectación a la continuidad de tu negocio.",
   },
   {
     question: "¿Cómo funcionan los backups?",
     answer:
-      "Configuramos sistemas automáticos que respaldan tu información tanto localmente como en la nube, asegurando que tus datos siempre estén protegidos y disponibles.",
+      "Configuramos sistemas automáticos que respaldan tu información tanto localmente como en la nube mediante Google One y otro en un disco duro externo, asegurando que tus datos siempre estén protegidos y disponibles.",
   },
   {
     question: "¿Qué tiempo de respuesta manejan?",
@@ -167,13 +167,23 @@ export const faqs: FAQ[] = [
   },
   {
     question: "¿Hay pago adicionales en el servicio por suscripcion?",
-    answer: "No, el servicio es por suscripcion y no hay pagos adicionales.",
+    answer:
+      "No, el servicio es por suscripcion, todo el servicio es por un unico pago mensual, dependiendo del plan que usted haya elegido.",
   },
   {
-    question:
-      "¿Que pasa si quiero renovar o pagar meses adelantados?",
+    question: "¿Que pasa si quiero renovar o pagar meses adelantados?",
     answer:
-      "El pago es mensual, se le notificara que debe renovar 3 dias antes de su fecha de vencimiento, luego debo renovar su plan o actualizar a uno mayor si lo desea.",
+      "El pago es mensual, no se hacen pagos adelantados, se le notificara que debe renovar 3 dias antes de su fecha de vencimiento, luego debo renovar su plan o actualizar a uno mayor si lo desea.",
+  },
+  {
+    question: "¿Qué metodos de pago tienen disponibles?",
+    answer:
+      "Aceptamos pagos mediante Binance Pay, Pago Movil, Transferencia bancaria, Zinli, USDT y Bitcoin",
+  },
+  {
+    question: "¿Qué pasa si quiero cancelar el servicio?",
+    answer:
+      "Puede cancelar el servicio en cualquier momento, no hay penalizaciones por cancelacion.",
   },
 ];
 

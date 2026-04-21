@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { plans } from "@/lib/constants";
+import { BinanceIcon, TetherIcon, BitcoinIcon, ZinliIcon, PagoMovilIcon, BdvIcon, BancamigaIcon } from "./PaymentIcons";
 import { Logo } from "./Logo";
 import { FloatingSpheres } from "./FloatingSpheres";
 import { Plan } from "@/lib/types";
@@ -131,7 +132,7 @@ export const PlansSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 text-center"
+          className="mt-16 mb-16 text-center"
         >
           <Link
             href="/planes"
@@ -141,6 +142,56 @@ export const PlansSection = () => {
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </motion.div>
+
+        {/* Payment Methods Carousel */}
+        <div className="mt-8 mb-4 max-w-full overflow-hidden relative pb-8">
+          <div className="text-center mb-8">
+            <p className="text-[#8A9199] text-sm uppercase tracking-widest font-bold">Métodos de Pago Aceptados</p>
+          </div>
+          {/* Gradient Shadows */}
+          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none mt-12"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none mt-12"></div>
+
+          <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+            {[...Array(2)].map((_, containerIndex) => (
+              <div key={containerIndex} className="flex gap-4 sm:gap-6 pr-4 sm:pr-6">
+                {/* We double the elements inside each half to ensure they fill wide screens */}
+                {[...Array(2)].map((_, groupIndex) => (
+                  <React.Fragment key={groupIndex}>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <BinanceIcon className="w-6 h-6 text-[#F3BA2F]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Binance Pay</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <ZinliIcon className="w-6 h-6 text-[#8D4AF8]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Zinli</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <PagoMovilIcon className="w-6 h-6 text-[#00A859]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Pago Móvil</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <BdvIcon className="w-6 h-6 text-[#0A417A]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Banco de Venezuela</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <BancamigaIcon className="w-6 h-6 text-[#008236]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Bancamiga</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <TetherIcon className="w-6 h-6 text-[#26A17B]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">USDT</span>
+                    </div>
+                    <div className="flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-[#E2E8F0] shadow-[0_0_15px_rgba(255,255,255,0.03)] hover:bg-white/10 hover:border-white/20 transition-all cursor-default">
+                      <BitcoinIcon className="w-6 h-6 text-[#F7931A]" />
+                      <span className="font-bold whitespace-nowrap text-sm sm:text-base">Bitcoin</span>
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

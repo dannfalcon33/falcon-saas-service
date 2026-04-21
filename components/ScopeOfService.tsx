@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from "react";
 import { motion } from "framer-motion";
@@ -7,10 +7,7 @@ import { FloatingSpheres } from "./FloatingSpheres";
 
 export const ScopeOfService = () => {
   return (
-    <section
-      id="solutions"
-      className="py-24 bg-black relative overflow-hidden"
-    >
+    <section id="solutions" className="py-24 bg-black relative overflow-hidden">
       <FloatingSpheres />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
@@ -24,8 +21,9 @@ export const ScopeOfService = () => {
             Alcance del Servicio
           </h2>
           <p className="text-[#8A9199] text-lg">
-            Soporte técnico y mantenimiento diseñado específicamente para las
-            necesidades de tu empresa, aportando beneficios reales y tangibles.
+            Continuidad operativa en hardware y software diseñado
+            específicamente para las necesidades de tu empresa, aportando
+            beneficios reales y tangibles.
           </p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
