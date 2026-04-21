@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
@@ -20,9 +20,10 @@ export const Hero = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight font-serif tracking-tight"
         >
-          Reduce fallas, tiempos muertos y riesgos tecnológicos en menos de{" "}
+          Asegura la continuidad operativa de tu empresa con un sistema IT
+          completo{" "}
           <span className="text-[#C0C6CF] drop-shadow-[0_0_15px_rgba(192,198,207,0.5)]">
-            24h
+            24/7
           </span>
         </motion.h1>
 
@@ -32,9 +33,9 @@ export const Hero = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-xl md:text-2xl text-[#8A9199] max-w-4xl mx-auto mb-8 leading-relaxed font-light"
         >
-          Nos encargamos del soporte, mantenimiento y respaldo de tu empresa
-          para que operes sin interrupciones, sin necesidad de contratar
-          personal interno.
+          Nos encargamos de todo el sistema informático de tu empresa para que
+          operes sin interrupciones, sin necesidad de contratar personal
+          interno.
         </motion.p>
 
         <motion.ul
@@ -44,16 +45,20 @@ export const Hero = () => {
           className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-12 text-[#C0C6CF] text-sm md:text-base font-medium"
         >
           <li className="flex justify-center items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Soporte remoto y
-            presencial
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Mantenimiento
+            preventivo y correctivo
           </li>
           <li className="flex justify-center items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Respuesta rápida
-            garantizada
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Respuesta
+            inmediata garantizada
           </li>
           <li className="flex justify-center items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Backups seguros
             en la nube
+          </li>
+          <li className="flex justify-center items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-[#2F5D8C]" /> Soporte remoto y
+            presencial
           </li>
         </motion.ul>
 

@@ -7,6 +7,10 @@
   --font-sans: "Inter", "Stack Sans Notch", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Libre Baskerville", "Cardo", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-cardo: "Cardo", serif;
+  --animate-marquee: marquee 25s linear infinite;
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
 }
 
 @layer base {
