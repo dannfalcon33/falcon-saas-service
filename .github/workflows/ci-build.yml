@@ -1,0 +1,39 @@
+name: CI Build Gate
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required env
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || (echo "Missing secret: NEXT_PUBLIC_SUPABASE_URL" && exit 1)
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY" || (echo "Missing secret: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY" && exit 1)
+
+      - name: Build
+        run: npm run build

@@ -1,6 +1,34 @@
 -- Falcon IT - RLS Hardening (2026-04-14)
 -- Purpose: Prevent cross-tenant reference injection via subscription_id in client inserts.
 
+-- HOTFIX: avoid policy recursion ("stack depth limit exceeded")
+-- by making helper functions SECURITY DEFINER.
+create or replace function public.current_app_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role::text
+  from public.profiles
+  where id = auth.uid()
+  limit 1
+$$;
+
+create or replace function public.current_client_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select c.id
+  from public.clients c
+  where c.owner_profile_id = auth.uid()
+  limit 1
+$$;
+
 -- PAYMENTS: client can only insert own client_id and own subscription_id.
 drop policy if exists "payments_client_insert_own" on public.payments;
 create policy "payments_client_insert_own"

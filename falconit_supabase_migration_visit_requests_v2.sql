@@ -131,14 +131,21 @@ create or replace function public.current_app_role()
 returns text
 language sql
 stable
+security definer
+set search_path = public
 as $$
-  select role::text from public.profiles where id = auth.uid()
+  select role::text
+  from public.profiles
+  where id = auth.uid()
+  limit 1
 $$;
 
 create or replace function public.current_client_id()
 returns uuid
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select c.id
   from public.clients c
