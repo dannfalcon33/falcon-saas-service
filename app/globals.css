@@ -85,4 +85,17 @@
   .animate-shine-6s {
     animation: shine 6s infinite linear;
   }
+
+  .animate-border-spin {
+    animation: border-spin 4s linear infinite;
+  }
+
+  @keyframes border-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
