@@ -3,8 +3,9 @@ import "./globals.css";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
 export const metadata: Metadata = {
-  title: "Falcon IT | Soporte Tecnico Especializado para Empresas",
-  description: "Protegemos y optimizamos la infraestructura tecnológica de tu empresa para que puedas enfocarte en tu negocio.",
+  title: "Falcon IT | Continuidad Operativa Tecnológica",
+  description:
+    "Nos encargamos de todo el sistema informático de tu empresa para que operes sin interrupciones, sin necesidad de contratar personal interno.",
 };
 
 export default function RootLayout({
